@@ -1,0 +1,10 @@
+{
+	"id": "my-obsidian-calendar-plugin",
+	"name": "MyCalendar_",
+	"version": "2.0.0",
+	"description": "Demonstrates some of the capabilities of the Obsidian API.",
+	"author": "-",
+	"authorUrl": "https://obsidian.md",
+	"fundingUrl": "https://obsidian.md/pricing",
+	"isDesktopOnly": false
+}
