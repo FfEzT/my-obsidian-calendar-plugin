@@ -1,6 +1,8 @@
 import { ItemView, Platform, WorkspaceLeaf, App } from 'obsidian';
 import MyPlugin from "./main"
-import { REST_TIME } from './constants';
+import { REST_TIME, EVENT_SRC } from './constants';
+import { IEvent } from './types';
+import { pageToEvents } from './util';
 
 export const VIEW_TYPE = "my-obsidian-calendar-plugin"
 
@@ -44,11 +46,15 @@ export class CalendarView extends ItemView {
   private async render(container: Element) {
     // @ts-ignore
     const {renderCalendar} = this.app.plugins.plugins["obsidian-full-calendar"]
+    const events: IEvent[] = []
+
+    for (let page of this.parrentPointer.cache.subscribe(EVENT_SRC, this)) {
+      events.push(...pageToEvents(page))
+    }
+
     this.calendar = renderCalendar(
         container,
-        // TODO
-        // {events: [...await getEvents(), ...REST_TIME]},
-        {events: [...REST_TIME]},
+        {events: [...REST_TIME, ...events]},
         this.getSettingsCalendar(),
     )
     // @ts-ignore
@@ -75,22 +81,18 @@ export class CalendarView extends ItemView {
       weekNumbers: true,
       timeFormat24h: true,
 
-      // eventClick: info => {
-      //     const notePath = info.event.extendedProps.notePath
-    
-      //     const tFile = MDCache.getFirstLinkpathDest(
-      //         notePath
-      //         ? notePath
-      //         : info.event.id,
-      //         ''
-      //     )
-    
-      //     // false = open in the current tab
-      //     const leaf = this.app.workspace.getLeaf(true)
-      //     leaf.openFile(tFile)
-      // },
+      eventClick: ({event}:any) => {
+          // NOTE сначала проверяет тик ли это, а потом переходит к id
+          const tFile = this.app.metadataCache.getFirstLinkpathDest(
+            event.extendedProps.notePath || event.id, ''
+          )
+
+          // false = open in the current tab
+          const leaf = this.app.workspace.getLeaf(true)
+          tFile && leaf.openFile(tFile)
+      },
       // modifyEvent: async (newPos, oldPos) => {
-      //     const props = newPos.extendedProps
+        // const props = newPos.extendedProps
       //     if (props.notePath)
       //         await changeProperty(props.notePath, newPos.start, newPos.end, newPos.allDay, props.tickName)
       //     else

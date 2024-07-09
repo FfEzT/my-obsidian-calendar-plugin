@@ -1,5 +1,20 @@
 const COLOUR_REST  = '#305B60'
 const COLOUR_SLEEP = '#cc0000'
+export const COLOUR_FREQUENCY = "#8A1717"
+export const COLOUR_DONE      = "#008E04"
+export const COLOUR_TICK      = "#457E7E"
+
+export const TEXT_DONE = "🟢done"
+
+export const EVENT_SRC = "databases"
+
+export const FORMAT_DEFAULT_ADD = 'x'
+export const DEFAULT_ADD = {
+    d: 0,
+    h: 1,
+    m: 30
+}
+
 
 const daysOfWeek = [ '1','2','3','4','5','6','0' ] // these recurrent events move separately
 const display = 'background'

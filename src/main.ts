@@ -3,7 +3,6 @@ import { Plugin, WorkspaceLeaf } from 'obsidian';
 import { CalendarView, VIEW_TYPE } from "./view"
 import { Cache } from "./cache"
 
-
 export default class MyPlugin extends Plugin {
   public cache = new Cache(this)
   public calendar: CalendarView
@@ -46,6 +45,7 @@ export default class MyPlugin extends Plugin {
     )
   }
 
+// TODO открытие в текущей вкладке
   private async activateView() {
     const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE)
     if (leaves.length === 0) {
