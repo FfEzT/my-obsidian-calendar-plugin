@@ -1,26 +1,22 @@
 import MyPlugin from "./main"
-import { App, TAbstractFile, TFile } from "obsidian"
-import { IPage } from "./types"
-import { getPage } from "./util"
-import { CalendarView } from "./view"
+import { TAbstractFile, TFile } from "obsidian"
+import { IPage, MyView } from "./types"
+import { getPage, isEqualObj } from "./util"
 
 
 export class Cache {
-  private app: App
-
   private parrentPointer: MyPlugin
 
   private storage = new Map<string, IPage>()
-  private subscribers = new Map<string, CalendarView>()
+  private subscribers = new Map<string, MyView>()
 
   constructor(parrentPointer: MyPlugin) {
     this.parrentPointer = parrentPointer
-    this.app = parrentPointer.app
 
-    this.app.workspace.onLayoutReady(() => this.initStorage())
+    this.parrentPointer.app.workspace.onLayoutReady(() => this.initStorage())
   }
 
-  public subscribe(path: string, subscriber: CalendarView): IPage[] {
+  public subscribe(path: string, subscriber: MyView): IPage[] {
     this.subscribers.set(path, subscriber)
 
     const result = []
@@ -32,44 +28,81 @@ export class Cache {
     return result
   }
 
-  // TODO отправлять сигнал календарю
-  public renameFile(file: TAbstractFile, oldPath: string) {
-    const tmpNode = this.storage.get(oldPath)
+  public unsubscribe(path: string) {
+    this.subscribers.delete(path)
+  }
 
-    // TODO когда такое может быть и что с этим делать?
-    if (!tmpNode)
+  public renameFile(file: TAbstractFile, oldPath: string) {
+    const oldPage = this.storage.get(oldPath) as IPage
+    const page = {...oldPage}
+    page.file.path = file.path
+
+    for (let [path, view] of this.subscribers) {
+      if (!file.path.startsWith(path))
+        continue
+
+      view.changeFile(page, oldPage)
+    }
+
+    this.storage.delete(oldPath)
+    this.storage.set(file.path, page)
+  }
+
+  public async addFile(file: TAbstractFile) {
+    const page = await getPage(file as TFile, this.parrentPointer.app.metadataCache)
+    this.storage.set(file.path, page)
+
+    for (let [path, view] of this.subscribers) {
+      if (!file.path.startsWith(path))
+        continue
+
+      view.addFile(page)
+    }
+  }
+
+  public async changeFile(file: TFile) {
+    const page = await getPage(file as TFile, this.parrentPointer.app.metadataCache)
+    const oldPage = this.storage.get(file.path) as IPage
+    if (isEqualObj(page, oldPage))
       return
 
-    tmpNode.file.path = file.path
-    this.storage.delete(oldPath)
-    this.storage.set(file.path, tmpNode)
+    for (let [path, view] of this.subscribers) {
+      if (!file.path.startsWith(path))
+        continue
+
+      view.changeFile(page, oldPage)
+    }
+
+    this.storage.set(file.path, page)
   }
 
-  // TODO отправлять сигнал календарю
-  public changeFile(file: TFile) {
-    getPage(file, this.app.metadataCache)
-    .then(
-      data => this.storage.set(file.path, data)
-    )
-  }
-
-  // TODO отправлять сигнал календарю
   public deleteFile(file: TAbstractFile) {
+    const page = this.storage.get(file.path) as IPage
+    for (let [path, view] of this.subscribers) {
+      if (!file.path.startsWith(path))
+        continue
+
+      view.deleteFile(page)
+    }
     this.storage.delete(file.path)
   }
 
-  // TODO отправлять сигнал календарю
-  public reset() {
+  // TODO добавить это в настройки
+  public async reset() {
     this.storage.clear()
-    this.initStorage()
+    this.subscribers.clear()
+    await this.initStorage()
+
+    for (let [_, view] of this.subscribers)
+      view.reset()
   }
 
   private async initStorage() {
-    const tFiles = this.app.vault.getMarkdownFiles()
+    const tFiles = this.parrentPointer.app.vault.getMarkdownFiles()
     for (let tFile of tFiles) {
       this.storage.set(
         tFile.path,
-        await getPage(tFile, this.app.metadataCache)
+        await getPage(tFile, this.parrentPointer.app.metadataCache)
       )
     }
   }

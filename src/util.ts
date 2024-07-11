@@ -1,5 +1,5 @@
 import { MetadataCache, TFile } from "obsidian";
-import { IEvent, IPage, ITick, IDate } from "./types";
+import { IEvent, IPage, ITick, IDate, CalendarEvent } from "./types";
 import { getAPI } from "obsidian-dataview"
 import {
   COLOUR_FREQUENCY,
@@ -7,29 +7,37 @@ import {
   COLOUR_TICK,
   TEXT_DONE,
   FORMAT_DEFAULT_ADD,
-  DEFAULT_ADD
+  DEFAULT_ADD,
+  MillisecsInHour,
+  DEFAULT_ADD_IN_MILLISEC,
+  MillisecsInDay,
+  MillisecsInMinute,
+  FORMAT_DAY,
+  FORMAT_HOUR,
+  FORMAT_MINUTE
 } from "./constants"
 
 export const dv = getAPI()
 
+// TODO переместить в MyPlugin
 export async function getPage(file: TFile, MDCache:MetadataCache)
                 : Promise<IPage> {
   let result: IPage = {
-  file: {
-    path: "",
-    name: ""
-  },
-  date: new Date,
-  timeStart: null,
-  duration: null,
-  ticks: []
+    file: {
+      path: "",
+      name: ""
+    },
+    date: new Date,
+    timeStart: null,
+    duration: null,
+    ticks: []
   }
 
-  const tFile = MDCache.getFirstLinkpathDest(file.path, '') as TFile
-  const ticks = getTicksFromText(await app.vault.read(tFile))
+  // const tFile = app.vault.getFileByPath(file.path) as TFile
+  const ticks = getTicksFromText(await app.vault.read(file))
 
   await app.fileManager.processFrontMatter(
-    tFile,
+    file,
     async property => {
       const page = {
       file: {
@@ -95,12 +103,6 @@ export function pageToEvents(page: IPage): IEvent[] {
   }
 
   return result
-}
-
-interface CalendarEvent {
-  start: Date
-  allDay: boolean
-  end?: Date
 }
 
 export function IDateToCalendarEvent(args: IDate): CalendarEvent {
@@ -179,4 +181,97 @@ function getTicksFromText(text: string): ITick[] {
 
   }
   return result
+}
+
+// TODO здесь исправление какой-то фичи
+export function eventToIDate({start, end, allDay}: CalendarEvent): IDate {
+  // ! для ISO (он переводит в гринвич мое время)
+    // я тут говорю, что я в гринвиче
+  start.setMinutes(
+    start.getMinutes() - start.getTimezoneOffset()
+  )
+
+  const result: IDate = {
+    duration: "",
+    timeStart: "",
+    date: start
+  }
+
+  // ! тут убираю гринвич для get'еров внизу
+  start.setMinutes(
+    start.getMinutes() + start.getTimezoneOffset()
+  )
+
+  if (allDay) {
+    result['timeStart'] = ''
+    result['duration'] = ''
+  }
+  else {
+    result['timeStart'] = start.getHours() + 'h' + start.getMinutes() + 'm'
+
+    // ! если выставлять из allDay во временой, то end = null
+    const srcMillisec = end
+    // @ts-ignore
+    ? end - start
+    : MillisecsInHour
+
+    result['duration'] = DEFAULT_ADD_IN_MILLISEC === srcMillisec
+    ? FORMAT_DEFAULT_ADD : millisecToString(srcMillisec)
+  }
+
+  return result
+}
+
+function millisecToString(millisec:number): string {
+  const days = Math.floor(
+      millisec / (MillisecsInDay)
+  )
+  millisec -= days * MillisecsInDay
+
+  const hours = Math.floor(
+      millisec / (MillisecsInHour)
+  )
+  millisec -= hours * MillisecsInHour
+
+  const minutes = Math.floor(
+      millisec / (MillisecsInMinute)
+  )
+  millisec -= minutes * MillisecsInMinute
+
+  let resString = ''
+  if (days)
+      resString += days.toString() + FORMAT_DAY
+  if (hours)
+      resString += hours.toString() + FORMAT_HOUR
+  if (minutes)
+      resString += minutes.toString() + FORMAT_MINUTE
+
+  return resString
+}
+
+export function isEqualObj(object1:any, object2:any) {
+  const keys1 = Object.keys(object1);
+  const keys2 = Object.keys(object2);
+
+  if (keys1.length !== keys2.length) {
+    return false;
+  }
+
+  for (const key of keys1) {
+    const val1 = object1[key];
+    const val2 = object2[key];
+    const areObjects = isObject(val1) && isObject(val2);
+    if (
+      areObjects && !isEqualObj(val1, val2) ||
+      !areObjects && val1 !== val2
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function isObject(object: any) {
+  return object != null && typeof object === 'object';
 }

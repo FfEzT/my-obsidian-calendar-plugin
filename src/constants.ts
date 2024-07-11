@@ -7,14 +7,17 @@ export const COLOUR_TICK      = "#457E7E"
 export const TEXT_DONE = "🟢done"
 
 export const EVENT_SRC = "databases"
+export const PLACE_FOR_CREATING_NOTE = "databases"
 
 export const FORMAT_DEFAULT_ADD = 'x'
+export const FORMAT_DAY = 'd'
+export const FORMAT_HOUR = 'h'
+export const FORMAT_MINUTE = 'm'
 export const DEFAULT_ADD = {
     d: 0,
     h: 1,
     m: 30
 }
-
 
 const daysOfWeek = [ '1','2','3','4','5','6','0' ] // these recurrent events move separately
 const display = 'background'
@@ -41,3 +44,12 @@ export const REST_TIME = [
       color: COLOUR_REST,
   }
 ]
+
+const MillisecsInSecond = 1000
+const SecsInMinute = 60
+const MinutesInHour = 60
+export const HoursInDay = 24
+export const MillisecsInMinute = MillisecsInSecond * SecsInMinute
+export const MillisecsInHour = MillisecsInMinute * MinutesInHour
+export const MillisecsInDay = MillisecsInHour * HoursInDay
+export const DEFAULT_ADD_IN_MILLISEC = DEFAULT_ADD.d * MillisecsInDay + DEFAULT_ADD.h * MillisecsInHour + DEFAULT_ADD.m * MillisecsInMinute

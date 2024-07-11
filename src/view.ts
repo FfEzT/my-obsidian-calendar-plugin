@@ -1,14 +1,14 @@
-import { ItemView, Platform, WorkspaceLeaf, App } from 'obsidian';
+import { ItemView, Platform, WorkspaceLeaf, Notice, Modal, App, Setting } from 'obsidian';
 import MyPlugin from "./main"
-import { REST_TIME, EVENT_SRC } from './constants';
-import { IEvent } from './types';
+import { REST_TIME, EVENT_SRC, PLACE_FOR_CREATING_NOTE } from './constants';
+import { CalendarEvent, IEvent, IPage, MyView } from './types';
 import { pageToEvents } from './util';
 
 export const VIEW_TYPE = "my-obsidian-calendar-plugin"
 
-export class CalendarView extends ItemView {
+export class CalendarView extends ItemView implements MyView {
   private parrentPointer: MyPlugin
-  public calendar = null
+  private calendar = null
 
   constructor(leaf: WorkspaceLeaf, parrentPointer: MyPlugin) {
     super(leaf)
@@ -35,11 +35,24 @@ export class CalendarView extends ItemView {
     this.calendar?.render();
   }
 
+  // TODO
+  public addFile(page: IPage) {}
+  // TODO сначала попробовать удалять все события, а потом добавлять их
+  public changeFile(newPage: IPage, oldPage: IPage): void {}
+  // TODO
+  public deleteFile(page: IPage) {}
+
+  public reset() {
+    this.onunload()
+    this.onOpen()
+  }
+
   onunload() {
     if (this.calendar) {
       // @ts-ignore
       this.calendar.destroy();
       this.calendar = null;
+      this.parrentPointer.cache.unsubscribe(EVENT_SRC)
     }
   }
 
@@ -91,41 +104,84 @@ export class CalendarView extends ItemView {
           const leaf = this.app.workspace.getLeaf(true)
           tFile && leaf.openFile(tFile)
       },
-      // modifyEvent: async (newPos, oldPos) => {
-        // const props = newPos.extendedProps
-      //     if (props.notePath)
-      //         await changeProperty(props.notePath, newPos.start, newPos.end, newPos.allDay, props.tickName)
-      //     else
-      //         await changeProperty(newPos.id, newPos.start, newPos.end, newPos.allDay)
-    
-      //     // true for update place in Calendar
-      //     return 1
-      // },
-      // select: (start, end, allDay, __viewMode) => {
-      //     new nameModal(
-      //         this.app,
-      //         async nameOfFile => {
-      //             // ! hehe vuln
-      //             const pathOfFile = `databases/tasks/${nameOfFile}.md`
-      //             try {
-      //                 if (!nameOfFile)
-      //                     throw 1
-    
-      //                 await app.vault.create(pathOfFile,'')
-      //                 setTimeout(
-      //                     () => changeProperty(pathOfFile, start, end, allDay),
-      //                     1500
-      //                 )
-      //                 new Notice("Created " + pathOfFile)
-      //             }
-      //             catch (e) {
-      //                 console.error(e)
-      //                 new Notice("Hm... error...")
-      //             }
-      //         }
-      //     ).open()
-      // }
+      // TODO по идее самому ничего не надо создавать, ибо есть cache, который сам обновит, но для "оптимизации" можно было бы добавить
+      modifyEvent: async (newPos: any, oldPos: any) => {
+        const props = newPos.extendedProps
+        const event: CalendarEvent = {
+          start: newPos.start,
+          end: newPos.end,
+          allDay: newPos.allDay
+        }
+        if (props.notePath)
+          this.parrentPointer.changeTickFile(props.notePath, props.tickName, event)
+        else
+        this.parrentPointer.changePropertyFile(newPos.id, event)
+      
+        // true for update place in Calendar
+        // TODO return true
+        return false
+      },
+      // TODO по идее самому ничего не надо создавать, ибо есть cache, который сам обновит, но для "оптимизации" можно было бы добавить
+      select: (start: Date, end: Date, allDay: boolean, __viewMode: any) => {
+        new nameModal(
+          this.app,
+          async (nameOfFile: string) => {
+            try {
+              if (!nameOfFile)
+                throw 1
+
+              const pathOfFile = PLACE_FOR_CREATING_NOTE + `/tasks/${nameOfFile}.md`
+              await this.parrentPointer.createFile(pathOfFile)
+
+              // TODO подумать, как убрать TimeOut
+              setTimeout(
+                () => this.parrentPointer.changePropertyFile(pathOfFile, {start, end, allDay}),
+                1500
+              )
+            }
+            catch (e) {
+              console.error(e)
+              new Notice("Hm... error...")
+            }
+          }
+        ).open()
+      }
     }
   }
 
+}
+
+class nameModal extends Modal {
+  private result: string
+  private onSubmit: Function
+
+  constructor(app: App, onSubmit: Function) {
+    super(app);
+    this.onSubmit = onSubmit;
+  }
+
+  onOpen() {
+    const { contentEl } = this
+
+    contentEl.createEl("h1", { text: "Name of task" })
+
+    new Setting(contentEl)
+    .setName("Name")
+    .addText(
+      text => text.onChange(value => this.result = value)
+    )
+
+    new Setting(contentEl)
+    .addButton(
+      (btn) => btn.setButtonText("Submit")
+        .setCta()
+        .onClick(() => {
+          this.close();
+          this.onSubmit(this.result);
+        }));
+  }
+
+  onClose() {
+    this.contentEl.empty();
+  }
 }

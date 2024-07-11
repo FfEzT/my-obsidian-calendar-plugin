@@ -34,3 +34,17 @@ export interface IEvent {
     notePath: string
   }
 }
+
+export interface CalendarEvent {
+  start: Date
+  allDay: boolean
+  end?: Date
+}
+
+// INFO это интерфейс для Cache
+export interface MyView {
+  addFile(_:IPage): void
+  changeFile(newPage: IPage, oldPage: IPage): void
+  deleteFile(_: IPage): void
+  reset(): void
+}
