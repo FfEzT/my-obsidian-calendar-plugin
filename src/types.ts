@@ -30,7 +30,7 @@ export interface IEvent {
   borderColor?: string
   editable: boolean
   extendedProps?: {
-    // tickName: string
+    tickName: string
     notePath: string
   }
 }
@@ -45,6 +45,7 @@ export interface CalendarEvent {
 export interface MyView {
   addFile(_:IPage): void
   changeFile(newPage: IPage, oldPage: IPage): void
+  renameFile(newPage: IPage, oldPage: IPage): void
   deleteFile(_: IPage): void
   reset(): void
 }

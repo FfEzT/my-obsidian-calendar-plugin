@@ -32,24 +32,28 @@ export class Cache {
     this.subscribers.delete(path)
   }
 
-  public renameFile(file: TAbstractFile, oldPath: string) {
+  public renameFile(file: TFile, oldPath: string) {
     const oldPage = this.storage.get(oldPath) as IPage
+
+    // NOTE типа это ссылочные объекты
     const page = {...oldPage}
+    page.file = {...oldPage.file}
     page.file.path = file.path
+    page.file.name = file.basename
 
     for (let [path, view] of this.subscribers) {
       if (!file.path.startsWith(path))
         continue
 
-      view.changeFile(page, oldPage)
+      view.renameFile(page, oldPage)
     }
 
     this.storage.delete(oldPath)
     this.storage.set(file.path, page)
   }
 
-  public async addFile(file: TAbstractFile) {
-    const page = await getPage(file as TFile, this.parrentPointer.app.metadataCache)
+  public async addFile(file: TFile) {
+    const page = await getPage(file, this.parrentPointer.app.metadataCache)
     this.storage.set(file.path, page)
 
     for (let [path, view] of this.subscribers) {
@@ -61,7 +65,7 @@ export class Cache {
   }
 
   public async changeFile(file: TFile) {
-    const page = await getPage(file as TFile, this.parrentPointer.app.metadataCache)
+    const page = await getPage(file, this.parrentPointer.app.metadataCache)
     const oldPage = this.storage.get(file.path) as IPage
     if (isEqualObj(page, oldPage))
       return

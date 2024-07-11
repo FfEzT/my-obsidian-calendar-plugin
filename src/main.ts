@@ -47,16 +47,16 @@ export default class MyPlugin extends Plugin {
 
   public async changeTickFile(path: string, tickname:string, event: CalendarEvent) {
     // NOTE это отправит сигнал cache
-
     const tFile = this.app.metadataCache.getFirstLinkpathDest(path, '') as TFile
 
     // TODO мб, поменять с использованием другой либы (см. плагин другой с видоса YouTube)
     const text = await this.app.vault.read(tFile)
     const property = eventToIDate(event)
+    const date = property["date"].toISOString().slice(0,-14)
 
     const regExp = new RegExp(`\\[t::\\s*${tickname},.*\]`, "gm")
-    const newString = `[t::${tickname},${property["date"]},${property["timeStart"]},${property['duration']}]`
-    await app.vault.modify(
+    const newString = `[t::${tickname},${date},${property["timeStart"]},${property['duration']}]`
+    await this.app.vault.modify(
       tFile,
       text.replace(regExp, newString)
     )
@@ -72,7 +72,13 @@ export default class MyPlugin extends Plugin {
     this.registerEvent(
       this.app.vault.on(
         "rename",
-        (file, oldPath) => this.cache.renameFile(file, oldPath)
+        (file, oldPath) => {
+          // проверка на то, что это файл, а не папка
+          if (!(file as TFile).basename)
+            return
+
+          this.cache.renameFile(file as TFile, oldPath)
+        }
       )
     )
 
@@ -91,7 +97,7 @@ export default class MyPlugin extends Plugin {
           if (!(file as TFile).basename)
             return
 
-          this.cache.addFile(file)
+          this.cache.addFile(file as TFile)
         }
       )
     )

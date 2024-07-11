@@ -36,9 +36,10 @@ export async function getPage(file: TFile, MDCache:MetadataCache)
   // const tFile = app.vault.getFileByPath(file.path) as TFile
   const ticks = getTicksFromText(await app.vault.read(file))
 
+  // TODO эту надо оптимизировать
   await app.fileManager.processFrontMatter(
     file,
-    async property => {
+    property => {
       const page = {
       file: {
         path: file.path,
@@ -51,7 +52,7 @@ export async function getPage(file: TFile, MDCache:MetadataCache)
       const duration = dv.duration(property.duration)
       // ! если убрать это, то не будет случай с FORMAT_DEFAULT_ADD
       if (duration)
-      page.duration = duration
+        page.duration = duration
 
       page.timeStart = dv.duration(property.timeStart)
       page.date = dv.date(property.date)
@@ -90,11 +91,11 @@ export function pageToEvents(page: IPage): IEvent[] {
   for (let tick of page.ticks) {
     const structure: IEvent = {
       ...structureTemplate,
-      id: page.file.path + tick.name,
-      title: '('+page.file.name+')' + tick.name,
+      id: templateIDTick(page.file.path, tick.name),
+      title: templateNameTick(page.file.name, tick.name),
       borderColor: COLOUR_TICK,
       extendedProps: {
-        // tickName: tick.name,
+        tickName: tick.name,
         notePath: page.file.path
     },
       ...IDateToCalendarEvent(tick)
@@ -143,7 +144,6 @@ export function IDateToCalendarEvent(args: IDate): CalendarEvent {
     }
     else {
       structure.allDay = true
-      // tmpTime = null // TODO add if bugs
     }
 
     structure.end = tmpTime
@@ -194,7 +194,7 @@ export function eventToIDate({start, end, allDay}: CalendarEvent): IDate {
   const result: IDate = {
     duration: "",
     timeStart: "",
-    date: start
+    date: new Date(start)
   }
 
   // ! тут убираю гринвич для get'еров внизу
@@ -274,4 +274,14 @@ export function isEqualObj(object1:any, object2:any) {
 
 function isObject(object: any) {
   return object != null && typeof object === 'object';
+}
+
+// каким будет ID в календаре тик
+export function templateIDTick(path: string, tickName:string) {
+  return path + tickName
+}
+
+// как будет отображаться в календаре тик
+export function templateNameTick(fileName: string, tickName:string) {
+  return "("+fileName+")" + tickName
 }

@@ -2,13 +2,13 @@ import { ItemView, Platform, WorkspaceLeaf, Notice, Modal, App, Setting } from '
 import MyPlugin from "./main"
 import { REST_TIME, EVENT_SRC, PLACE_FOR_CREATING_NOTE } from './constants';
 import { CalendarEvent, IEvent, IPage, MyView } from './types';
-import { pageToEvents } from './util';
+import { pageToEvents, templateIDTick } from './util';
 
 export const VIEW_TYPE = "my-obsidian-calendar-plugin"
 
 export class CalendarView extends ItemView implements MyView {
   private parrentPointer: MyPlugin
-  private calendar = null
+  private calendar: any = null
 
   constructor(leaf: WorkspaceLeaf, parrentPointer: MyPlugin) {
     super(leaf)
@@ -35,12 +35,33 @@ export class CalendarView extends ItemView implements MyView {
     this.calendar?.render();
   }
 
-  // TODO
-  public addFile(page: IPage) {}
-  // TODO сначала попробовать удалять все события, а потом добавлять их
-  public changeFile(newPage: IPage, oldPage: IPage): void {}
-  // TODO
-  public deleteFile(page: IPage) {}
+  public addFile(page: IPage) {
+    const events = pageToEvents(page)
+    for (let event of events)
+      this.calendar.addEvent(event)
+  }
+
+  public changeFile(newPage: IPage, oldPage: IPage): void {
+    this.deleteFile(oldPage)
+    this.addFile(newPage)
+  }
+
+  public renameFile(newPage: IPage, oldPage: IPage): void {
+    this.changeFile(newPage, oldPage)
+  }
+
+  public deleteFile(page: IPage) {
+    if (!this.calendar)
+      return
+
+    this.calendar.getEventById(page.file.path)?.remove()
+
+    for (let tick of page.ticks) {
+      this.calendar.getEventById(
+        templateIDTick(page.file.path, tick.name)
+      )?.remove()
+    }
+  }
 
   public reset() {
     this.onunload()
@@ -104,7 +125,6 @@ export class CalendarView extends ItemView implements MyView {
           const leaf = this.app.workspace.getLeaf(true)
           tFile && leaf.openFile(tFile)
       },
-      // TODO по идее самому ничего не надо создавать, ибо есть cache, который сам обновит, но для "оптимизации" можно было бы добавить
       modifyEvent: async (newPos: any, oldPos: any) => {
         const props = newPos.extendedProps
         const event: CalendarEvent = {
@@ -112,16 +132,15 @@ export class CalendarView extends ItemView implements MyView {
           end: newPos.end,
           allDay: newPos.allDay
         }
+
         if (props.notePath)
           this.parrentPointer.changeTickFile(props.notePath, props.tickName, event)
         else
-        this.parrentPointer.changePropertyFile(newPos.id, event)
-      
+          this.parrentPointer.changePropertyFile(newPos.id, event)
+
         // true for update place in Calendar
-        // TODO return true
-        return false
+        return true
       },
-      // TODO по идее самому ничего не надо создавать, ибо есть cache, который сам обновит, но для "оптимизации" можно было бы добавить
       select: (start: Date, end: Date, allDay: boolean, __viewMode: any) => {
         new nameModal(
           this.app,
