@@ -19,6 +19,24 @@ export const DEFAULT_ADD = {
     m: 30
 }
 
+export const BACKGROUND_COLOUR = {
+    hue: {
+        shift: 0,
+        min: 0,
+        max: 360
+    },
+    saturation: {
+        shift: 0,
+        min: 10,
+        max: 100
+    },
+    lightness: {
+        shift: 0,
+        min: 60,
+        max: 100
+    }
+}
+
 const daysOfWeek = [ '1','2','3','4','5','6','0' ] // these recurrent events move separately
 const display = 'background'
 

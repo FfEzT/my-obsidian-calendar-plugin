@@ -1,4 +1,3 @@
-import { MetadataCache, TFile } from "obsidian";
 import { IEvent, IPage, ITick, IDate, CalendarEvent } from "./types";
 import { getAPI } from "obsidian-dataview"
 import {
@@ -14,7 +13,8 @@ import {
   MillisecsInMinute,
   FORMAT_DAY,
   FORMAT_HOUR,
-  FORMAT_MINUTE
+  FORMAT_MINUTE,
+  BACKGROUND_COLOUR
 } from "./constants"
 
 export const dv = getAPI()
@@ -25,7 +25,7 @@ export function pageToEvents(page: IPage): IEvent[] {
   const structureTemplate = {
     id: "",
     title: "",
-    color: "", // #2
+    borderColor: getColourFromPath(page.file.path),
     editable: true,
   }
 
@@ -37,9 +37,9 @@ export function pageToEvents(page: IPage): IEvent[] {
       ...IDateToCalendarEvent(page)
     }
     if (page.frequency)
-      structure.borderColor = COLOUR_FREQUENCY
+      structure.color = COLOUR_FREQUENCY
     if (page.status == TEXT_DONE)
-        structure.borderColor = COLOUR_DONE
+        structure.color = COLOUR_DONE
 
     result.push(structure)
   }
@@ -48,7 +48,7 @@ export function pageToEvents(page: IPage): IEvent[] {
       ...structureTemplate,
       id: templateIDTick(page.file.path, tick.name),
       title: templateNameTick(page.file.name, tick.name),
-      borderColor: COLOUR_TICK,
+      color: COLOUR_TICK,
       extendedProps: {
         tickName: tick.name,
         notePath: page.file.path
@@ -59,6 +59,16 @@ export function pageToEvents(page: IPage): IEvent[] {
   }
 
   return result
+}
+
+function pathToFileWithoutFileName(path: string) {
+  const folders = path.split('/').slice(0,-1)
+  let res = ""
+
+  for (let folder of folders) {
+    res += folder + '/'
+  }
+  return res.slice(0,-1)
 }
 
 export function IDateToCalendarEvent(args: IDate): CalendarEvent {
@@ -240,4 +250,41 @@ export function templateIDTick(path: string, tickName:string) {
 // как будет отображаться в календаре тик
 export function templateNameTick(fileName: string, tickName:string) {
   return "("+fileName+")" + tickName
+}
+
+function hashString(str: string) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+}
+
+function toRange(src: number, min: number, max: number) {
+  max -= min
+  src %= max
+  return Math.abs(src + min)
+}
+
+function getColourFromPath(path: string): string {
+  const str = pathToFileWithoutFileName(path)
+
+  // NOTE типа каждый первый, второй или третий символ строки
+  const str1 = hashString([...str].filter((_, index) => (index + 1) % 3 !== 0).join(""))
+  const str2 = hashString([...str].filter((_, index) => (index + 2) % 3 !== 0).join(""))
+  const str3 = hashString([...str].filter((_, index) => (index + 3) % 3 !== 0).join(""))
+
+  const hue = toRange(str1 + BACKGROUND_COLOUR.hue.shift,
+    BACKGROUND_COLOUR.hue.min,
+    BACKGROUND_COLOUR.hue.max
+  )
+  const saturation = toRange(str2 + BACKGROUND_COLOUR.saturation.shift,
+    BACKGROUND_COLOUR.saturation.min,
+    BACKGROUND_COLOUR.saturation.max)
+  const lightness  = toRange(str3 + BACKGROUND_COLOUR.lightness.shift,
+    BACKGROUND_COLOUR.lightness.min,
+    BACKGROUND_COLOUR.lightness.max
+  )
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`
 }
