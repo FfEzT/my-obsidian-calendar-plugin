@@ -10,15 +10,24 @@ export class Cache {
   private storage = new Map<string, IPage>()
   private subscribers = new Map<string, MyView>()
 
+  private initSync: Promise<void> = new Promise(
+    resolve => this.initSyncResolve = resolve
+  )
+  private initSyncResolve: any
+  private isInited = false
+
   constructor(parrentPointer: MyPlugin) {
     this.parrentPointer = parrentPointer
 
-    // NOTE эта штука не нужна, ибо кэш прогревается с методом addFile, который вызывается при загрузке плагина
-    // this.parrentPointer.app.workspace.onLayoutReady(() => this.initStorage())
+    this.parrentPointer.app.workspace.onLayoutReady(() => this.initStorage())
   }
 
-  public subscribe(path: string, subscriber: MyView): IPage[] {
+  public async subscribe(path: string, subscriber: MyView): Promise<IPage[]> {
+
     this.subscribers.set(path, subscriber)
+
+    if (!this.isInited)
+      await this.initSync
 
     const result = []
     for (let [key, value] of this.storage) {
@@ -34,6 +43,9 @@ export class Cache {
   }
 
   public renameFile(file: TFile, oldPath: string) {
+    if (!this.isInited)
+      return
+
     const oldPage = this.storage.get(oldPath) as IPage
 
     // NOTE типа это ссылочные объекты
@@ -54,6 +66,9 @@ export class Cache {
   }
 
   public async addFile(file: TFile) {
+    if (!this.isInited)
+      return
+
     const page = await this.parrentPointer.getPage(file)
     this.storage.set(file.path, page)
 
@@ -66,6 +81,9 @@ export class Cache {
   }
 
   public async changeFile(file: TFile) {
+    if (!this.isInited)
+      return
+
     const page = await this.parrentPointer.getPage(file)
     const oldPage = this.storage.get(file.path) as IPage
     if (isEqualObj(page, oldPage))
@@ -82,6 +100,9 @@ export class Cache {
   }
 
   public deleteFile(file: TAbstractFile) {
+    if (!this.isInited)
+      return
+
     const page = this.storage.get(file.path) as IPage
     for (let [path, view] of this.subscribers) {
       if (!file.path.startsWith(path))
@@ -93,6 +114,8 @@ export class Cache {
   }
 
   public async reset() {
+    this.isInited = false
+
     this.storage.clear()
 
     const tmp = this.subscribers
@@ -111,5 +134,9 @@ export class Cache {
         await this.parrentPointer.getPage(tFile)
       )
     }
+
+    this.isInited = true
+    this.initSyncResolve()
   }
+
 }

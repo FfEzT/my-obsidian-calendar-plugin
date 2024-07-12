@@ -82,7 +82,8 @@ export class CalendarView extends ItemView implements MyView {
     const {renderCalendar} = this.app.plugins.plugins["obsidian-full-calendar"]
     const events: IEvent[] = []
 
-    for (let page of this.parrentPointer.cache.subscribe(EVENT_SRC, this)) {
+    for (let page of
+              await this.parrentPointer.cache.subscribe(EVENT_SRC, this)) {
       events.push(...pageToEvents(page))
     }
 
