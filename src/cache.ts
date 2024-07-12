@@ -55,10 +55,12 @@ export class Cache {
     page.file.name = file.basename
 
     for (let [path, view] of this.subscribers) {
-      if (!file.path.startsWith(path))
-        continue
-
-      view.renameFile(page, oldPage)
+      if (file.path.startsWith(path) && oldPath.startsWith(path))
+        view.renameFile(page, oldPage)
+      else if (oldPath.startsWith(path))
+        view.deleteFile(oldPage)
+      else if (file.path.startsWith(path))
+        view.addFile(page)
     }
 
     this.storage.delete(oldPath)
@@ -138,5 +140,4 @@ export class Cache {
     this.isInited = true
     this.initSyncResolve()
   }
-
 }
