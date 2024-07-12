@@ -77,12 +77,11 @@ export function IDateToCalendarEvent(args: IDate): CalendarEvent {
     allDay: false,
   }
 
-  if (args.duration && args.timeStart?.values) {
-    structure.start.setHours  (args.timeStart.values.hours   || 0)
-    structure.start.setMinutes(args.timeStart.values.minutes || 0)
+  if (args.duration) {
+    structure.start.setHours  (args.timeStart?.values?.hours   || 0)
+    structure.start.setMinutes(args.timeStart?.values?.minutes || 0)
 
     let tmpTime = new Date(structure.start)
-
     if (args.duration === FORMAT_DEFAULT_ADD) {
         tmpTime.setMinutes(
             tmpTime.getMinutes() + DEFAULT_ADD.m
@@ -111,14 +110,19 @@ export function IDateToCalendarEvent(args: IDate): CalendarEvent {
       structure.allDay = true
     }
 
+    if (!args.timeStart?.values)
+      structure.allDay = true
+
     structure.end = tmpTime
+  }
+  else if (args.duration) {
+    structure.allDay = true
   }
   else structure.allDay = true
 
   return structure
 }
 
-// #3
 export function CalendarEventToIDate(event: CalendarEvent): IDate {
   const {start, end, allDay} = event
   // ! для ISO (он переводит в гринвич мое время)
@@ -138,22 +142,17 @@ export function CalendarEventToIDate(event: CalendarEvent): IDate {
     start.getMinutes() + start.getTimezoneOffset()
   )
 
-  if (allDay) {
-    result['timeStart'] = ''
-    result['duration'] = ''
-  }
-  else {
-    result['timeStart'] = start.getHours() + 'h' + start.getMinutes() + 'm'
+  result['timeStart'] = allDay ? ""
+  : start.getHours() + 'h' + start.getMinutes() + 'm'
 
-    // ! если выставлять из allDay во временой, то end = null
-    const srcMillisec = end
-    // @ts-ignore
-    ? end - start
-    : MillisecsInHour
+  // ! если выставлять из allDay во временой, то end = null
+  const srcMillisec = end
+  // @ts-ignore
+  ? end - start
+  : MillisecsInHour
 
-    result['duration'] = DEFAULT_ADD_IN_MILLISEC === srcMillisec
-    ? FORMAT_DEFAULT_ADD : millisecToString(srcMillisec)
-  }
+  result['duration'] = DEFAULT_ADD_IN_MILLISEC === srcMillisec
+  ? FORMAT_DEFAULT_ADD : millisecToString(srcMillisec)
 
   return result
 }
