@@ -19,7 +19,7 @@ export class CalendarView extends ItemView implements MyView {
 
   public getDisplayText() {return "Calendar"}
 
-  // TODO функционал с выбором папки и исключениями
+  // #1
   public async onOpen() {
     if (Platform.isMobile)
       this.containerEl.style.height = "95vh"

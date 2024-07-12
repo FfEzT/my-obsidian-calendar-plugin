@@ -2,23 +2,27 @@
 import { Notice, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
 import { CalendarView, VIEW_TYPE } from "./view"
 import { Cache } from "./cache"
-import { eventToIDate } from './util';
-import { CalendarEvent } from './types';
+import { dv, CalendarEventToIDate, getTicksFromText } from './util';
+import { CalendarEvent, IPage } from './types';
 
 export default class MyPlugin extends Plugin {
   public cache = new Cache(this)
-  public calendar: CalendarView
 
   public async onload() {
       this.registerView(
           VIEW_TYPE,
-          (leaf: WorkspaceLeaf) => {
-            this.calendar = new CalendarView(leaf, this)
-            return this.calendar
-          }
+          (leaf: WorkspaceLeaf) => new CalendarView(leaf, this)
       )
 
       this.addRibbonIcon("info", "Open Calendar", () => this.activateView())
+      this.addCommand({
+        id: 'reset-cache',
+        name: 'Reset Cache',
+        callback: () => {
+          this.cache.reset()
+        }
+      });
+
       this.initRegister()
   }
 
@@ -30,13 +34,13 @@ export default class MyPlugin extends Plugin {
     new Notice("Created " + path)
   }
   
-  public async changePropertyFile(path: string, {start, end, allDay}: CalendarEvent) {
+  public async changePropertyFile(path: string, event: CalendarEvent) {
     // NOTE это отправит сигнал cache
     const tFile = this.app.metadataCache.getFirstLinkpathDest(path, '') as TFile
     await this.app.fileManager.processFrontMatter(
       tFile,
       property => {
-          const property_ = eventToIDate({start, end, allDay})
+          const property_ = CalendarEventToIDate(event)
 
           property['date']      = property_['date'].toISOString().slice(0,-14)
           property['timeStart'] = property_['timeStart']
@@ -49,9 +53,9 @@ export default class MyPlugin extends Plugin {
     // NOTE это отправит сигнал cache
     const tFile = this.app.metadataCache.getFirstLinkpathDest(path, '') as TFile
 
-    // TODO мб, поменять с использованием другой либы (см. плагин другой с видоса YouTube)
+    // ! мб, поменять с использованием другой либы (см. плагин другой с видоса YouTube)
     const text = await this.app.vault.read(tFile)
-    const property = eventToIDate(event)
+    const property = CalendarEventToIDate(event)
     const date = property["date"].toISOString().slice(0,-14)
 
     const regExp = new RegExp(`\\[t::\\s*${tickname},.*\]`, "gm")
@@ -60,6 +64,49 @@ export default class MyPlugin extends Plugin {
       tFile,
       text.replace(regExp, newString)
     )
+  }
+
+  async getPage(file: TFile): Promise<IPage> {
+    let result: IPage = {
+      file: {
+        path: "",
+        name: ""
+      },
+      date: new Date,
+      timeStart: null,
+      duration: null,
+      ticks: []
+    }
+
+    // const tFile = app.vault.getFileByPath(file.path) as TFile
+    const ticks = getTicksFromText(await this.app.vault.read(file))
+
+    // TODO эту надо оптимизировать
+    await this.app.fileManager.processFrontMatter(
+      file,
+      property => {
+        const page = {
+        file: {
+          path: file.path,
+          name: file.basename
+        },
+        ticks,
+        ...property
+        }
+
+        const duration = dv.duration(property.duration)
+        // ! если убрать это, то не будет случай с FORMAT_DEFAULT_ADD
+        if (duration)
+          page.duration = duration
+
+        page.timeStart = dv.duration(property.timeStart)
+        page.date = dv.date(property.date)
+
+        result = page
+      }
+    )
+
+    return result
   }
 
   private initRegister() {
@@ -103,11 +150,10 @@ export default class MyPlugin extends Plugin {
     )
   }
 
-// TODO открытие в текущей вкладке
   private async activateView() {
     const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE)
     if (leaves.length === 0) {
-      const leaf = this.app.workspace.getLeaf("tab");
+      const leaf = this.app.workspace.getLeaf(false);
       await leaf.setViewState({
         type: VIEW_TYPE,
         active: true,

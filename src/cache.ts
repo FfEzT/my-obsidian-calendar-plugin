@@ -1,7 +1,7 @@
 import MyPlugin from "./main"
 import { TAbstractFile, TFile } from "obsidian"
 import { IPage, MyView } from "./types"
-import { getPage, isEqualObj } from "./util"
+import { isEqualObj } from "./util"
 
 
 export class Cache {
@@ -13,7 +13,8 @@ export class Cache {
   constructor(parrentPointer: MyPlugin) {
     this.parrentPointer = parrentPointer
 
-    this.parrentPointer.app.workspace.onLayoutReady(() => this.initStorage())
+    // NOTE эта штука не нужна, ибо кэш прогревается с методом addFile, который вызывается при загрузке плагина
+    // this.parrentPointer.app.workspace.onLayoutReady(() => this.initStorage())
   }
 
   public subscribe(path: string, subscriber: MyView): IPage[] {
@@ -53,7 +54,7 @@ export class Cache {
   }
 
   public async addFile(file: TFile) {
-    const page = await getPage(file, this.parrentPointer.app.metadataCache)
+    const page = await this.parrentPointer.getPage(file)
     this.storage.set(file.path, page)
 
     for (let [path, view] of this.subscribers) {
@@ -65,7 +66,7 @@ export class Cache {
   }
 
   public async changeFile(file: TFile) {
-    const page = await getPage(file, this.parrentPointer.app.metadataCache)
+    const page = await this.parrentPointer.getPage(file)
     const oldPage = this.storage.get(file.path) as IPage
     if (isEqualObj(page, oldPage))
       return
@@ -91,13 +92,14 @@ export class Cache {
     this.storage.delete(file.path)
   }
 
-  // TODO добавить это в настройки
   public async reset() {
     this.storage.clear()
-    this.subscribers.clear()
+
+    const tmp = this.subscribers
+    this.subscribers = new Map()
     await this.initStorage()
 
-    for (let [_, view] of this.subscribers)
+    for (let [_, view] of tmp)
       view.reset()
   }
 
@@ -106,7 +108,7 @@ export class Cache {
     for (let tFile of tFiles) {
       this.storage.set(
         tFile.path,
-        await getPage(tFile, this.parrentPointer.app.metadataCache)
+        await this.parrentPointer.getPage(tFile)
       )
     }
   }
