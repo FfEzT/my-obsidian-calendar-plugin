@@ -14,7 +14,8 @@ import {
   FORMAT_DAY,
   FORMAT_HOUR,
   FORMAT_MINUTE,
-  BACKGROUND_COLOUR
+  BACKGROUND_COLOUR,
+  COLOUR_DEFAULT
 } from "./constants"
 
 export const dv = getAPI()
@@ -25,6 +26,7 @@ export function pageToEvents(page: IPage): IEvent[] {
   const structureTemplate = {
     id: "",
     title: "",
+    color: COLOUR_DEFAULT,
     borderColor: getColourFromPath(page.file.path),
     editable: true,
   }
@@ -52,7 +54,7 @@ export function pageToEvents(page: IPage): IEvent[] {
       extendedProps: {
         tickName: tick.name,
         notePath: page.file.path
-    },
+      },
       ...IDateToCalendarEvent(tick)
     }
     result.push(structure)
@@ -62,13 +64,10 @@ export function pageToEvents(page: IPage): IEvent[] {
 }
 
 function pathToFileWithoutFileName(path: string) {
-  const folders = path.split('/').slice(0,-1)
-  let res = ""
-
-  for (let folder of folders) {
-    res += folder + '/'
-  }
-  return res.slice(0,-1)
+  const path_separator = path.lastIndexOf("/");
+  if (path_separator !== -1)
+    return path.slice(0, path_separator);
+  return "";
 }
 
 export function IDateToCalendarEvent(args: IDate): CalendarEvent {
@@ -260,10 +259,13 @@ function hashString(str: string) {
   return hash;
 }
 
+// TODO не работает на отрицательных числах
+// и при min > max
 function toRange(src: number, min: number, max: number) {
   max -= min
-  src %= max
-  return Math.abs(src + min)
+  src %= max+1
+
+  return (src + min)
 }
 
 function getColourFromPath(path: string): string {

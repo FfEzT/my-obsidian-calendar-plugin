@@ -38,6 +38,9 @@ export class Cache {
     return result
   }
 
+  // TODO по идее если много раз нажимать на кнопку активации
+  // не будет вызываться unsubscribe
+  // здесь это не критично, но будет бобо, если будет несколько views
   public unsubscribe(path: string) {
     this.subscribers.delete(path)
   }

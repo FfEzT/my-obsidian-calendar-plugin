@@ -3,6 +3,7 @@ const COLOUR_SLEEP = '#cc0000'
 export const COLOUR_FREQUENCY = "#8A1717"
 export const COLOUR_DONE      = "#008E04"
 export const COLOUR_TICK      = "#457E7E"
+export const COLOUR_DEFAULT   = "#5e3fa8"
 
 export const TEXT_DONE = "🟢done"
 
@@ -27,13 +28,13 @@ export const BACKGROUND_COLOUR = {
     },
     saturation: {
         shift: 0,
-        min: 10,
+        min: 90,
         max: 100
     },
     lightness: {
         shift: 0,
-        min: 60,
-        max: 100
+        min: 70,
+        max: 80
     }
 }
 
