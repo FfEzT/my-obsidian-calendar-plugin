@@ -165,6 +165,16 @@ export class CalendarView extends ItemView implements MyView {
             }
           }
         ).open()
+      },
+      openContextMenuForEvent: (e: any, mouseEvent: MouseEvent) => {
+        const menu = new Menu
+        menu.addItem(
+          (item) => item.setTitle(e.id)
+              // .onClick(async () => console.log(""))
+        )
+        // menu.addSeparator()
+
+        menu.showAtMouseEvent(mouseEvent)
       }
     }
   }
