@@ -108,23 +108,24 @@ export function renderCalendar(
         nowIndicator: true,
         scrollTimeReset: false,
         dayMaxEvents: true,
+        slotDuration: '00:15:00',
 
         headerToolbar: !isNarrow
             ? {
                   left: "prev,next today",
                   center: "title",
-                  right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
+                  right: "dayGridMonth,timeGridWeek,listWeek",
               }
             : !isMobile
             ? {
                   right: "today,prev,next",
-                  left: "timeGrid3Days,timeGridDay,listWeek",
+                  left: "dayGridMonth,timeGrid3Days,listWeek",
               }
             : false,
         footerToolbar: isMobile
             ? {
                   right: "today,prev,next",
-                  left: "timeGrid3Days,timeGridDay,listWeek",
+                  left: "timeGrid3Days,dayGridMonth,timeGridWeek,listWeek",
               }
             : false,
 
