@@ -1,8 +1,9 @@
-import { ItemView, Platform, WorkspaceLeaf, Notice, Modal, App, Setting } from 'obsidian';
+import { ItemView, Platform, WorkspaceLeaf, Notice, Modal, App, Setting, Menu } from 'obsidian';
 import MyPlugin from "./main"
 import { REST_TIME, EVENT_SRC, PLACE_FOR_CREATING_NOTE } from './constants';
 import { CalendarEvent, IEvent, IPage, MyView } from './types';
 import { pageToEvents, templateIDTick } from './util';
+import { renderCalendar } from 'lib/obsidian-full-calendar/calendar';
 
 export const VIEW_TYPE = "my-obsidian-calendar-plugin"
 
@@ -31,7 +32,6 @@ export class CalendarView extends ItemView implements MyView {
   }
 
   public onResize() {
-    // @ts-ignore
     this.calendar?.render();
   }
 
@@ -70,7 +70,6 @@ export class CalendarView extends ItemView implements MyView {
 
   onunload() {
     if (this.calendar) {
-      // @ts-ignore
       this.calendar.destroy();
       this.calendar = null;
       this.parrentPointer.cache.unsubscribe(EVENT_SRC)
@@ -78,8 +77,6 @@ export class CalendarView extends ItemView implements MyView {
   }
 
   private async render(container: Element) {
-    // @ts-ignore
-    const {renderCalendar} = this.app.plugins.plugins["obsidian-full-calendar"]
     const events: IEvent[] = []
 
     for (let page of
@@ -88,25 +85,22 @@ export class CalendarView extends ItemView implements MyView {
     }
 
     this.calendar = renderCalendar(
-        container,
+        container as HTMLElement,
+        // @ts-ignore
         {events: [...REST_TIME, ...events]},
         this.getSettingsCalendar(),
     )
-    // @ts-ignore
     this.calendar.setOption('weekNumbers', true)
 
     // NOTE to fix bug first render
     window.setTimeout(
       (_: any) => {
         if (Platform.isMobile)
-          // @ts-ignore
           this.calendar.changeView('timeGrid3Days')
         else
-          // @ts-ignore
           this.calendar.changeView('timeGridWeek')
       }, 1
     )
-    // @ts-ignore
     this.calendar.render()
   }
 
