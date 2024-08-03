@@ -69,11 +69,12 @@ export class CalendarView extends ItemView implements MyView {
   }
 
   onunload() {
-    if (this.calendar) {
-      this.calendar.destroy();
-      this.calendar = null;
-      this.parrentPointer.cache.unsubscribe(EVENT_SRC)
-    }
+    if (!this.calendar)
+      return
+
+    this.calendar.destroy();
+    this.calendar = null;
+    this.parrentPointer.cache.unsubscribe(EVENT_SRC)
   }
 
   private async render(container: Element) {
