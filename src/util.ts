@@ -141,17 +141,22 @@ export function CalendarEventToIDate(event: CalendarEvent): IDate {
     start.getMinutes() + start.getTimezoneOffset()
   )
 
-  result['timeStart'] = allDay ? ""
-  : start.getHours() + 'h' + start.getMinutes() + 'm'
-
-  // ! если выставлять из allDay во временой, то end = null
-  const srcMillisec = end
+  let srcMillisec = end
   // @ts-ignore
   ? end - start
   : MillisecsInHour
 
+  if (allDay) {
+    result['timeStart'] = ""
+    if (srcMillisec <= MillisecsInDay)
+      srcMillisec = 0
+  }
+  else
+    result['timeStart'] = start.getHours() + 'h' + start.getMinutes() + 'm'
+
   result['duration'] = DEFAULT_ADD_IN_MILLISEC === srcMillisec
-  ? FORMAT_DEFAULT_ADD : millisecToString(srcMillisec)
+  ? FORMAT_DEFAULT_ADD
+  : millisecToString(srcMillisec)
 
   return result
 }
