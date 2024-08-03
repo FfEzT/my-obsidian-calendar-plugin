@@ -1,6 +1,6 @@
 /* NOTE это меняет толщину для events */
 .fc-event.fc-event-draggable.fc-event-resizable.fc-event-start.fc-event-end {
-  border-width: 2px;
+  border-width: 4px;
 }
 
 /* src/ui/overrides.css */

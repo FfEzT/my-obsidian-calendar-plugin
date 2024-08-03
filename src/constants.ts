@@ -28,13 +28,13 @@ export const BACKGROUND_COLOUR = {
     },
     saturation: {
         shift: 0,
-        min: 90,
+        min: 70,
         max: 100
     },
     lightness: {
         shift: 0,
-        min: 70,
-        max: 80
+        min: 10,
+        max: 50
     }
 }
 

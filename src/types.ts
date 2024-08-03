@@ -26,8 +26,8 @@ export interface IEvent {
   id: string
   title: string
   allDay: boolean
-  color?: string
-  borderColor: string
+  color: string
+  borderColor?: string
   editable: boolean
   extendedProps?: {
     tickName: string

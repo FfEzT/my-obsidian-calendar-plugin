@@ -26,8 +26,8 @@ export function pageToEvents(page: IPage): IEvent[] {
   const structureTemplate = {
     id: "",
     title: "",
-    color: COLOUR_DEFAULT,
-    borderColor: getColourFromPath(page.file.path),
+    // borderColor: COLOUR_DEFAULT,
+    color: getColourFromPath(page.file.path),
     editable: true,
   }
 
@@ -39,9 +39,9 @@ export function pageToEvents(page: IPage): IEvent[] {
       ...IDateToCalendarEvent(page)
     }
     if (page.frequency)
-      structure.color = COLOUR_FREQUENCY
+      structure.borderColor = COLOUR_FREQUENCY
     if (page.status == TEXT_DONE)
-        structure.color = COLOUR_DONE
+        structure.borderColor = COLOUR_DONE
 
     result.push(structure)
   }
@@ -50,7 +50,7 @@ export function pageToEvents(page: IPage): IEvent[] {
       ...structureTemplate,
       id: templateIDTick(page.file.path, tick.name),
       title: templateNameTick(page.file.name, tick.name),
-      color: COLOUR_TICK,
+      borderColor: COLOUR_TICK,
       extendedProps: {
         tickName: tick.name,
         notePath: page.file.path
