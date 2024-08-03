@@ -113,7 +113,7 @@ export class CalendarView extends ItemView implements MyView {
 
       eventClick: (arg: any) => {
           const {event, jsEvent} = arg
-          openNote(event)
+          this.parrentPointer.openNote(event)
       },
       modifyEvent: async (newPos: any, oldPos: any) => {
         const props = newPos.extendedProps
@@ -156,19 +156,30 @@ export class CalendarView extends ItemView implements MyView {
         ).open()
       },
       openContextMenuForEvent: (e: IEvent, mouseEvent: MouseEvent) => {
-        contextMenuForEvent(e, mouseEvent)
+        this.contextMenuForEvent(e, mouseEvent)
       }
     }
 
     if (Platform.isMobile) {
       result.eventClick = (arg: any) => {
         const {event, jsEvent} = arg
-        contextMenuForEvent(event, jsEvent)
+        this.contextMenuForEvent(event, jsEvent)
       }
       result.openContextMenuForEvent = (_:IEvent, __:MouseEvent) => {}
     }
 
     return result
+  }
+
+  private contextMenuForEvent(event: IEvent, mouseEvent: MouseEvent) {
+    const menu = new Menu
+    menu.addItem(
+      (item) => item.setTitle(event.id)
+        .onClick(async () => this.parrentPointer.openNote(event))
+    )
+    // menu.addSeparator()
+
+    menu.showAtMouseEvent(mouseEvent)
   }
 
 }
@@ -206,26 +217,4 @@ class nameModal extends Modal {
   onClose() {
     this.contentEl.empty();
   }
-}
-
-function openNote(event: IEvent) {
-  // NOTE сначала проверяет тик ли это, а потом переходит к id
-  const tFile = this.app.metadataCache.getFirstLinkpathDest(
-    event?.extendedProps?.notePath || event.id, ''
-  )
-
-  // false = open in the current tab
-  const leaf = this.app.workspace.getLeaf(true)
-  tFile && leaf.openFile(tFile)
-}
-
-function contextMenuForEvent(event: IEvent, mouseEvent: MouseEvent) {
-  const menu = new Menu
-  menu.addItem(
-    (item) => item.setTitle(event.id)
-      .onClick(async () => openNote(event))
-  )
-  // menu.addSeparator()
-
-  menu.showAtMouseEvent(mouseEvent)
 }

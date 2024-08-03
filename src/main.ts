@@ -3,7 +3,7 @@ import { Notice, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
 import { CalendarView, VIEW_TYPE } from "./view"
 import { Cache } from "./cache"
 import { dv, CalendarEventToIDate, getTicksFromText } from './util';
-import { CalendarEvent, IPage } from './types';
+import { CalendarEvent, IPage, IEvent } from './types';
 
 export default class MyPlugin extends Plugin {
   public cache = new Cache(this)
@@ -33,7 +33,7 @@ export default class MyPlugin extends Plugin {
     await this.app.vault.create(path,'')
     new Notice("Created " + path)
   }
-  
+
   public async changePropertyFile(path: string, event: CalendarEvent) {
     // NOTE это отправит сигнал cache
     const tFile = this.app.metadataCache.getFirstLinkpathDest(path, '') as TFile
@@ -64,6 +64,17 @@ export default class MyPlugin extends Plugin {
       tFile,
       text.replace(regExp, newString)
     )
+  }
+
+  public openNote(event: IEvent) {
+    // NOTE сначала проверяет тик ли это, а потом переходит к id
+    const tFile = this.app.metadataCache.getFirstLinkpathDest(
+      event?.extendedProps?.notePath || event.id, ''
+    )
+  
+    // false = open in the current tab
+    const leaf = this.app.workspace.getLeaf(true)
+    tFile && leaf.openFile(tFile)
   }
 
   async getPage(file: TFile): Promise<IPage> {
