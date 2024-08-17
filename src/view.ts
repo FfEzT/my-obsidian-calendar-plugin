@@ -139,7 +139,7 @@ export class CalendarView extends ItemView implements MyView {
               if (!nameOfFile)
                 throw 1
 
-              const pathOfFile = PLACE_FOR_CREATING_NOTE + `/tasks/${nameOfFile}.md`
+              const pathOfFile = PLACE_FOR_CREATING_NOTE + `/${nameOfFile}.md`
               await this.parrentPointer.createFile(pathOfFile)
 
               // TODO подумать, как убрать TimeOut
