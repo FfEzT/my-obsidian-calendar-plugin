@@ -1,5 +1,11 @@
 import { DURATION_TYPES } from "obsidian-dataview"
 
+// TODO записать сюда цвета и другие параметры
+// + разбиение сетки (5 минут, 10)
+export interface IPluginSettings {
+  
+}
+
 export interface IDate {
   date: Date
   timeStart: DURATION_TYPES

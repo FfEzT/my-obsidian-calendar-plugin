@@ -3,12 +3,19 @@ import { Notice, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
 import { CalendarView, VIEW_TYPE } from "./view"
 import { Cache } from "./cache"
 import { dv, CalendarEventToIDate, getTicksFromText } from './util';
-import { CalendarEvent, IPage, IEvent } from './types';
+import { CalendarEvent, IPage, IEvent, IPluginSettings } from './types';
+import { MySettingTab } from './setting';
+import { DEFAULT_SETTINGS } from './constants';
 
 export default class MyPlugin extends Plugin {
   public cache = new Cache(this)
 
+  private settings: IPluginSettings
+
   public async onload() {
+      await this.loadSettings();
+      this.addSettingTab(new MySettingTab(this.app, this));
+
       this.registerView(
           VIEW_TYPE,
           (leaf: WorkspaceLeaf) => new CalendarView(leaf, this)
@@ -28,12 +35,14 @@ export default class MyPlugin extends Plugin {
 
   public onunload() {}
 
+  // TODO это можно в новый класс вывести (который работает с файлами)
   public async createFile(path: string) {
     // NOTE это отправит сигнал cache
     await this.app.vault.create(path,'')
     new Notice("Created " + path)
   }
 
+  // TODO это можно в новый класс вывести (который работает с файлами)
   public async changePropertyFile(path: string, event: CalendarEvent) {
     // NOTE это отправит сигнал cache
     const tFile = this.app.metadataCache.getFirstLinkpathDest(path, '') as TFile
@@ -49,6 +58,7 @@ export default class MyPlugin extends Plugin {
     )
   }
 
+  // TODO это можно в новый класс вывести (который работает с файлами)
   public async changeTickFile(path: string, tickname:string, event: CalendarEvent) {
     // NOTE это отправит сигнал cache
     const tFile = this.app.metadataCache.getFirstLinkpathDest(path, '') as TFile
@@ -66,6 +76,7 @@ export default class MyPlugin extends Plugin {
     )
   }
 
+  // TODO это можно в новый класс вывести (который работает с файлами)
   public openNote(event: IEvent) {
     // NOTE сначала проверяет тик ли это, а потом переходит к id
     const tFile = this.app.metadataCache.getFirstLinkpathDest(
@@ -77,6 +88,7 @@ export default class MyPlugin extends Plugin {
     tFile && leaf.openFile(tFile)
   }
 
+  // TODO это можно в новый класс вывести (который работает с файлами)
   async getPage(file: TFile): Promise<IPage> {
     let result: IPage = {
       file: {
@@ -118,6 +130,10 @@ export default class MyPlugin extends Plugin {
     )
 
     return result
+  }
+
+  public async saveSettings() {
+    await this.saveData(this.settings);
   }
 
   private initRegister() {
@@ -176,5 +192,9 @@ export default class MyPlugin extends Plugin {
     }
     else for (let leaf of leaves)
       leaf.detach()
+  }
+
+  private async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
   }
 }
