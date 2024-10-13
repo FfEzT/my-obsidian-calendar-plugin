@@ -26,6 +26,15 @@ export class Cache {
     this.parrentPointer.app.workspace.onLayoutReady(() => this.initStorage())
   }
 
+  public getPage(path: string): IPage|undefined {
+    return this.storage.get(path)
+  }
+
+  public log() {
+    console.log("storage", this.storage)
+    console.log("subscribers", this.subscribers)
+  }
+
   public async subscribe(id: Number, paths: Array<string>, subscriber: ISubscriber): Promise<IPage[]> {
     this.subscribers.set(
       id,
@@ -64,6 +73,10 @@ export class Cache {
     page.file.path = file.path
     page.file.name = file.basename
 
+
+    this.storage.delete(oldPath)
+    this.storage.set(file.path, page)
+
     for (let [_, {paths, subscriber}] of this.subscribers) {
       for (let path of paths) {
         if (file.path.startsWith(path) && oldPath.startsWith(path))
@@ -74,9 +87,6 @@ export class Cache {
           subscriber.addFile(page)
       }
     }
-
-    this.storage.delete(oldPath)
-    this.storage.set(file.path, page)
   }
 
   public async addFile(file: TFile) {
@@ -105,6 +115,8 @@ export class Cache {
     if (isEqualObj(page, oldPage))
       return
 
+    this.storage.set(file.path, page)
+
     for (let [_, {paths, subscriber}] of this.subscribers) {
       for (let path of paths) {
         if (!file.path.startsWith(path))
@@ -113,13 +125,13 @@ export class Cache {
         subscriber.changeFile(page, oldPage)
       }
     }
-
-    this.storage.set(file.path, page)
   }
 
   public deleteFile(file: TAbstractFile) {
     if (!this.isInited)
       return
+
+    this.storage.delete(file.path)
 
     const page = this.storage.get(file.path) as IPage
     for (let [_, {paths, subscriber}] of this.subscribers) {
@@ -130,7 +142,6 @@ export class Cache {
         subscriber.deleteFile(page)
       }
     }
-    this.storage.delete(file.path)
   }
 
   public async reset() {

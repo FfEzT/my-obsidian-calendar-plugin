@@ -1,5 +1,7 @@
 import { IEvent, IPage, ITick, IDate, CalendarEvent } from "./types";
+import { DataviewApi } from "obsidian-dataview/lib/api/plugin-api"
 import { getAPI } from "obsidian-dataview"
+
 import {
   COLOUR_FREQUENCY,
   COLOUR_DONE,
@@ -18,7 +20,9 @@ import {
   COLOUR_DEFAULT
 } from "./constants"
 
-export const dv = getAPI()
+const SLEEP_TIME = 1000 // ms
+
+export const dv = getAPI() as DataviewApi
 
 export function pageToEvents(page: IPage): IEvent[] {
   const result: IEvent[] = []
@@ -293,4 +297,151 @@ function getColourFromPath(path: string): string {
     BACKGROUND_COLOUR.lightness.max
   )
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`
+}
+
+async function waitDvInit() {
+  while (!dv.index.initialized)
+    await sleep(SLEEP_TIME)
+}
+
+export async function getNotesWithoutParent(src: string): Promise<IPage[]> {
+  await waitDvInit()
+
+  const child = dv.pages(`"${src}"`).where(
+    (page: any) => !page.parent
+  ).array()
+
+  return child as IPage[]
+}
+
+// TODO refactor
+export async function isNotDone(note: IPage): Promise<boolean> {
+  await waitDvInit()
+
+  let countAll  = 0
+  let countDone = 0
+
+  const pages = new Set()
+  const stack = [note.file.path]
+  while (stack.length > 0) {
+    const meta = dv.page(stack.pop())
+
+    if (!meta)
+      continue
+
+    countAll  += calcAllTasks(meta.file)
+    countDone += calcDoneTasks(meta.file)
+
+    if (countAll != countDone)
+      return true
+
+    const inlinks = meta.file.inlinks.array()
+    if (inlinks.length == 0) {
+      if (meta.status) {
+        ++countAll
+
+        if (meta.status == TEXT_DONE)
+          ++countDone
+      }
+
+      if (countAll != countDone)
+        return true
+    }
+
+    for (let inlink of inlinks ) {
+      if (pages.has(inlink.path))
+        continue
+
+      pages.add(inlink.path)
+      stack.push(inlink.path)
+    }
+  }
+
+  return countAll != countDone
+}
+
+// TODO refactor
+export async function isStarted(note: IPage): Promise<boolean> {
+  await waitDvInit()
+
+  // let countAll  = 0
+  let countDone = 0
+
+  const pages = new Set()
+  const stack = [note.file.path]
+  while (stack.length > 0) {
+    const meta = dv.page(stack.pop())
+
+    if (!meta)
+      continue
+
+    // countAll  += calcAllTasks(meta.file)
+    countDone += calcDoneTasks(meta.file)
+
+    if (countDone)
+      return true
+
+    const inlinks = meta.file.inlinks.array()
+    if (inlinks.length == 0) {
+      if (meta.status) {
+        // ++countAll
+
+        if (meta.status == TEXT_DONE)
+          return true
+      }
+    }
+
+    for (let inlink of inlinks ) {
+      if (pages.has(inlink.path))
+        continue
+
+      pages.add(inlink.path)
+      stack.push(inlink.path)
+    }
+  }
+
+  return false
+}
+
+const calcDoneTasks = (page: any) => {
+  let countDone = 0
+  for (let i of page.tasks.array()) {
+    const strInStatus = i.status.trim()
+    if (!!strInStatus)
+      ++countDone
+  }
+
+  return countDone
+}
+
+const calcAllTasks = (page: any) => {
+  return page.tasks.array().length
+}
+
+export async function getChildNotePaths(path: string): Promise<string[]> {
+  await waitDvInit()
+
+  const meta = dv.page(path)
+  const inlinks = meta?.file.inlinks.array()
+
+  const result: string[] = []
+  for (let inlink of inlinks) {
+    result.push( inlink.path )
+  }
+
+  return result
+}
+
+export async function getParentNote(page: IPage): Promise<(IPage|undefined)[]> {
+  await waitDvInit()
+
+  const meta = dv.page(page.file.path)
+  const outlinks = meta?.file.outlinks.array()
+
+  const result: IPage[] = []
+  for (let outlink of outlinks) {
+    result.push( dv.page(outlink.path) as IPage )
+  }
+
+  return result
 }

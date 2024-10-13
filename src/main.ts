@@ -6,9 +6,11 @@ import { dv, CalendarEventToIDate, getTicksFromText } from './util';
 import { CalendarEvent, IPage, IEvent, IPluginSettings } from './types';
 import { MySettingTab } from './setting';
 import { DEFAULT_SETTINGS, EVENT_SRC, CACHE_ID } from './constants';
+import StatusCorrector from './statusCorrector';
 
 export default class MyPlugin extends Plugin {
   public cache = new Cache(this)
+  private statusCorrector: StatusCorrector
 
   private settings: IPluginSettings
 
@@ -16,12 +18,25 @@ export default class MyPlugin extends Plugin {
       await this.loadSettings();
       this.addSettingTab(new MySettingTab(this.app, this));
 
+      if (this.settings.withStatusCorrector) {
+        this.statusCorrector = new StatusCorrector(CACHE_ID.STATUS_CORRECTOR, [EVENT_SRC], this)
+
+        this.addCommand({
+          id: 'fullStatusCorrect',
+          name: 'Correct Status of each one of notes',
+          callback: () => {
+            this.statusCorrector.correctAllNotes()
+          }
+        });
+      }
+
       this.registerView(
           VIEW_TYPE,
           (leaf: WorkspaceLeaf) => new CalendarView(leaf, CACHE_ID.CALENDAR, [EVENT_SRC], this) // TODO EVENT_SRC брать из настроек
       )
 
       this.addRibbonIcon("info", "Open Calendar", () => this.activateView())
+
       this.addCommand({
         id: 'reset-cache',
         name: 'Reset Cache',
@@ -29,11 +44,21 @@ export default class MyPlugin extends Plugin {
           this.cache.reset()
         }
       });
+      this.addCommand({
+        id: 'log-cache',
+        name: 'Log Cache',
+        callback: () => {
+          this.cache.log()
+        }
+      });
 
       this.initRegister()
   }
 
-  public onunload() {}
+  public onunload() {
+    if (this.settings.withStatusCorrector)
+      this.statusCorrector.destroy()
+  }
 
   // TODO это можно в новый класс вывести (который работает с файлами)
   public async createFile(path: string) {
@@ -54,6 +79,17 @@ export default class MyPlugin extends Plugin {
           property['date']      = property_['date'].toISOString().slice(0,-14)
           property['timeStart'] = property_['timeStart']
           property['duration']  = property_['duration']
+      }
+    )
+  }
+  
+  public async changeStatusFile(path: string, status: string) {
+    // NOTE это отправит сигнал cache
+    const tFile = this.app.metadataCache.getFirstLinkpathDest(path, '') as TFile
+    await this.app.fileManager.processFrontMatter(
+      tFile,
+      property => {
+          property['status'] = status
       }
     )
   }
@@ -118,7 +154,7 @@ export default class MyPlugin extends Plugin {
         }
 
         const duration = dv.duration(property.duration)
-        // ! если убрать это, то не будет случай с FORMAT_DEFAULT_ADD
+        // NOTE если убрать это, то не будет случай с FORMAT_DEFAULT_ADD
         if (duration)
           page.duration = duration
 
