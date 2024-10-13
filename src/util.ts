@@ -1,5 +1,7 @@
 import { IEvent, IPage, ITick, IDate, CalendarEvent } from "./types";
+import { DataviewApi } from "obsidian-dataview/lib/api/plugin-api"
 import { getAPI } from "obsidian-dataview"
+
 import {
   COLOUR_FREQUENCY,
   COLOUR_DONE,
@@ -18,7 +20,7 @@ import {
   COLOUR_DEFAULT
 } from "./constants"
 
-export const dv = getAPI()
+export const dv = getAPI() as DataviewApi
 
 export function pageToEvents(page: IPage): IEvent[] {
   const result: IEvent[] = []
@@ -294,3 +296,4 @@ function getColourFromPath(path: string): string {
   )
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`
 }
+

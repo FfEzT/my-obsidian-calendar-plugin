@@ -1,12 +1,13 @@
 import { IPluginSettings } from "./types"
 
-// TODO сюда переместить цвета
+// TODO сюда переместить цвета да и остальные параметры
 export const DEFAULT_SETTINGS: Partial<IPluginSettings> = {
 
 }
 
 export enum CACHE_ID {
-  CALENDAR = 1
+  CALENDAR = 1,
+  STATUS_CORRECTOR
 }
 
 const COLOUR_REST  = '#305B60'
@@ -16,7 +17,13 @@ export const COLOUR_DONE      = "#008E04"
 export const COLOUR_TICK      = "#457E7E"
 export const COLOUR_DEFAULT   = "#5e3fa8"
 
+// TODO переделать в TEXT = {DONE...BLOCKED}
 export const TEXT_DONE = "🟢done"
+export const TEXT_IN_PROGRESS = "🔵in progress"
+export const TEXT_SOON = "🟣soon"
+export const TEXT_CHILD_IN_PROGRESS = "🟡🟦child in progress"
+export const TEXT_NEW = "🔴not started"
+export const TEXT_BLOCKED = "🟡blocked"
 
 export const EVENT_SRC = "databases"
 export const PLACE_FOR_CREATING_NOTE = "databases"
@@ -26,9 +33,9 @@ export const FORMAT_DAY = 'd'
 export const FORMAT_HOUR = 'h'
 export const FORMAT_MINUTE = 'm'
 export const DEFAULT_ADD = {
-    d: 0,
-    h: 1,
-    m: 30
+  d: 0,
+  h: 1,
+  m: 30
 }
 
 export const BACKGROUND_COLOUR = {

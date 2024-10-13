@@ -6,6 +6,7 @@ import { dv, CalendarEventToIDate, getTicksFromText } from './util';
 import { CalendarEvent, IPage, IEvent, IPluginSettings } from './types';
 import { MySettingTab } from './setting';
 import { DEFAULT_SETTINGS, EVENT_SRC, CACHE_ID } from './constants';
+import StatusCorrector from './statusCorrector';
 
 export default class MyPlugin extends Plugin {
   public cache = new Cache(this)
@@ -15,6 +16,9 @@ export default class MyPlugin extends Plugin {
   public async onload() {
       await this.loadSettings();
       this.addSettingTab(new MySettingTab(this.app, this));
+
+      // TODO вызывать метод .destroy при выключении плагина
+      new StatusCorrector(CACHE_ID.STATUS_CORRECTOR, [EVENT_SRC], this)
 
       this.registerView(
           VIEW_TYPE,

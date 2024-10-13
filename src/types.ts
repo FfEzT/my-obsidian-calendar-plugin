@@ -7,6 +7,7 @@ export interface IPluginSettings {
 }
 
 export interface IDate {
+  // TODO date может и не быть (см. main.ts/getPage)
   date: Date
   timeStart: DURATION_TYPES
   duration: DURATION_TYPES
