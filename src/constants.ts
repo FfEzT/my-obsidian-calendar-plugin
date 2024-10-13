@@ -5,6 +5,10 @@ export const DEFAULT_SETTINGS: Partial<IPluginSettings> = {
 
 }
 
+export enum CACHE_ID {
+  CALENDAR = 1
+}
+
 const COLOUR_REST  = '#305B60'
 const COLOUR_SLEEP = '#cc0000'
 export const COLOUR_FREQUENCY = "#8A1717"

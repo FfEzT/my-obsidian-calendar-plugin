@@ -10,10 +10,14 @@ export const VIEW_TYPE = "my-obsidian-calendar-plugin"
 export class CalendarView extends ItemView implements MyView {
   private parrentPointer: MyPlugin
   private calendar: any = null
+  private idForCache: number
+  private event_src: string[]
 
-  constructor(leaf: WorkspaceLeaf, parrentPointer: MyPlugin) {
+  constructor(leaf: WorkspaceLeaf, idForCache: number, event_src: string[], parrentPointer: MyPlugin) {
     super(leaf)
     this.parrentPointer = parrentPointer
+    this.idForCache = idForCache
+    this.event_src = event_src
   }
 
   public getViewType() {return VIEW_TYPE}
@@ -35,7 +39,7 @@ export class CalendarView extends ItemView implements MyView {
     this.calendar?.render();
   }
 
-  public addFile(page: IPage) {
+  public addFile(page: IPage): void {
     const events = pageToEvents(page)
     for (let event of events)
       this.calendar.addEvent(event)
@@ -50,7 +54,7 @@ export class CalendarView extends ItemView implements MyView {
     this.changeFile(newPage, oldPage)
   }
 
-  public deleteFile(page: IPage) {
+  public deleteFile(page: IPage): void {
     if (!this.calendar)
       return
 
@@ -74,14 +78,14 @@ export class CalendarView extends ItemView implements MyView {
 
     this.calendar.destroy();
     this.calendar = null;
-    this.parrentPointer.cache.unsubscribe(EVENT_SRC)
+    this.parrentPointer.cache.unsubscribe(this.idForCache)
   }
 
   private async render(container: Element) {
     const events: IEvent[] = []
 
     for (let page of
-              await this.parrentPointer.cache.subscribe(EVENT_SRC, this)) {
+              await this.parrentPointer.cache.subscribe(this.idForCache, this.event_src, this)) {
       events.push(...pageToEvents(page))
     }
 

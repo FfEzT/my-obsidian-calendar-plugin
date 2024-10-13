@@ -5,7 +5,7 @@ import { Cache } from "./cache"
 import { dv, CalendarEventToIDate, getTicksFromText } from './util';
 import { CalendarEvent, IPage, IEvent, IPluginSettings } from './types';
 import { MySettingTab } from './setting';
-import { DEFAULT_SETTINGS } from './constants';
+import { DEFAULT_SETTINGS, EVENT_SRC, CACHE_ID } from './constants';
 
 export default class MyPlugin extends Plugin {
   public cache = new Cache(this)
@@ -18,7 +18,7 @@ export default class MyPlugin extends Plugin {
 
       this.registerView(
           VIEW_TYPE,
-          (leaf: WorkspaceLeaf) => new CalendarView(leaf, this)
+          (leaf: WorkspaceLeaf) => new CalendarView(leaf, CACHE_ID.CALENDAR, [EVENT_SRC], this) // TODO EVENT_SRC брать из настроек
       )
 
       this.addRibbonIcon("info", "Open Calendar", () => this.activateView())

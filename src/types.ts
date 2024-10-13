@@ -55,3 +55,11 @@ export interface MyView {
   deleteFile(_: IPage): void
   reset(): void
 }
+
+export interface ISubscriber {
+  renameFile(newPage: IPage, oldPage: IPage): void
+  deleteFile(page: IPage): void
+  addFile(page: IPage): void
+  changeFile(newPage: IPage, oldPage: IPage): void
+  reset(): void
+}

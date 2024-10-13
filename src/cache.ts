@@ -1,19 +1,23 @@
 import MyPlugin from "./main"
 import { TAbstractFile, TFile } from "obsidian"
-import { IPage, MyView } from "./types"
+import { IPage, MyView, ISubscriber } from "./types"
 import { isEqualObj } from "./util"
 
+interface IPathSubscriber {
+  paths: string[],
+  subscriber: ISubscriber
+}
 
 export class Cache {
   private parrentPointer: MyPlugin
 
   private storage = new Map<string, IPage>()
-  private subscribers = new Map<string, MyView>()
+  private subscribers = new Map<Number, IPathSubscriber>()
 
   private initSync: Promise<void> = new Promise(
     resolve => this.initSyncResolve = resolve
   )
-  private initSyncResolve: any
+  private initSyncResolve: (value: void | PromiseLike<void>) => void
   private isInited = false
 
   constructor(parrentPointer: MyPlugin) {
@@ -22,27 +26,30 @@ export class Cache {
     this.parrentPointer.app.workspace.onLayoutReady(() => this.initStorage())
   }
 
-  public async subscribe(path: string, subscriber: MyView): Promise<IPage[]> {
-
-    this.subscribers.set(path, subscriber)
+  public async subscribe(id: Number, paths: Array<string>, subscriber: ISubscriber): Promise<IPage[]> {
+    this.subscribers.set(
+      id,
+      {
+        paths,
+        subscriber
+      }
+    )
 
     if (!this.isInited)
       await this.initSync
 
     const result = []
     for (let [key, value] of this.storage) {
-      if (!key.startsWith(path))
-        continue
-      result.push(value)
+      for (let path of paths) {
+        if (key.startsWith(path))
+          result.push(value)
+      }
     }
     return result
   }
 
-  // TODO по идее если много раз нажимать на кнопку активации
-  // не будет вызываться unsubscribe
-  // здесь это не критично, но будет бобо, если будет несколько views
-  public unsubscribe(path: string) {
-    this.subscribers.delete(path)
+  public unsubscribe(id: Number) {
+    this.subscribers.delete(id)
   }
 
   public renameFile(file: TFile, oldPath: string) {
@@ -57,13 +64,15 @@ export class Cache {
     page.file.path = file.path
     page.file.name = file.basename
 
-    for (let [path, view] of this.subscribers) {
-      if (file.path.startsWith(path) && oldPath.startsWith(path))
-        view.renameFile(page, oldPage)
-      else if (oldPath.startsWith(path))
-        view.deleteFile(oldPage)
-      else if (file.path.startsWith(path))
-        view.addFile(page)
+    for (let [_, {paths, subscriber}] of this.subscribers) {
+      for (let path of paths) {
+        if (file.path.startsWith(path) && oldPath.startsWith(path))
+          subscriber.renameFile(page, oldPage)
+        else if (oldPath.startsWith(path))
+          subscriber.deleteFile(oldPage)
+        else if (file.path.startsWith(path))
+          subscriber.addFile(page)
+      }
     }
 
     this.storage.delete(oldPath)
@@ -77,11 +86,13 @@ export class Cache {
     const page = await this.parrentPointer.getPage(file)
     this.storage.set(file.path, page)
 
-    for (let [path, view] of this.subscribers) {
-      if (!file.path.startsWith(path))
-        continue
+    for (let [_, {paths, subscriber}] of this.subscribers) {
+      for (let path of paths) {
+        if (!file.path.startsWith(path))
+          continue
 
-      view.addFile(page)
+        subscriber.addFile(page)
+      }
     }
   }
 
@@ -94,11 +105,13 @@ export class Cache {
     if (isEqualObj(page, oldPage))
       return
 
-    for (let [path, view] of this.subscribers) {
-      if (!file.path.startsWith(path))
-        continue
+    for (let [_, {paths, subscriber}] of this.subscribers) {
+      for (let path of paths) {
+        if (!file.path.startsWith(path))
+          continue
 
-      view.changeFile(page, oldPage)
+        subscriber.changeFile(page, oldPage)
+      }
     }
 
     this.storage.set(file.path, page)
@@ -109,11 +122,13 @@ export class Cache {
       return
 
     const page = this.storage.get(file.path) as IPage
-    for (let [path, view] of this.subscribers) {
-      if (!file.path.startsWith(path))
-        continue
+    for (let [_, {paths, subscriber}] of this.subscribers) {
+      for (let path of paths) {
+        if (!file.path.startsWith(path))
+          continue
 
-      view.deleteFile(page)
+        subscriber.deleteFile(page)
+      }
     }
     this.storage.delete(file.path)
   }
@@ -127,8 +142,8 @@ export class Cache {
     this.subscribers = new Map()
     await this.initStorage()
 
-    for (let [_, view] of tmp)
-      view.reset()
+    for (let [_, {subscriber}] of tmp)
+      subscriber.reset()
   }
 
   private async initStorage() {
@@ -140,7 +155,7 @@ export class Cache {
       )
     }
 
-    this.isInited = true
     this.initSyncResolve()
+    this.isInited = true
   }
 }
