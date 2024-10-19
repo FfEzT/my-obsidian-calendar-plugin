@@ -18,6 +18,7 @@ export default class MyPlugin extends Plugin {
       this.addSettingTab(new MySettingTab(this.app, this));
 
       // TODO вызывать метод .destroy при выключении плагина
+      // TODO добавить в Command pallete функцию deepCorrect
       new StatusCorrector(CACHE_ID.STATUS_CORRECTOR, [EVENT_SRC], this)
 
       this.registerView(
@@ -26,11 +27,19 @@ export default class MyPlugin extends Plugin {
       )
 
       this.addRibbonIcon("info", "Open Calendar", () => this.activateView())
+
       this.addCommand({
         id: 'reset-cache',
         name: 'Reset Cache',
         callback: () => {
           this.cache.reset()
+        }
+      });
+      this.addCommand({
+        id: 'log-cache',
+        name: 'Log Cache',
+        callback: () => {
+          this.cache.log()
         }
       });
 
@@ -122,7 +131,7 @@ export default class MyPlugin extends Plugin {
         }
 
         const duration = dv.duration(property.duration)
-        // ! если убрать это, то не будет случай с FORMAT_DEFAULT_ADD
+        // NOTE если убрать это, то не будет случай с FORMAT_DEFAULT_ADD
         if (duration)
           page.duration = duration
 

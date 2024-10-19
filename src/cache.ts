@@ -26,6 +26,11 @@ export class Cache {
     this.parrentPointer.app.workspace.onLayoutReady(() => this.initStorage())
   }
 
+  public log() {
+    console.log("storage", this.storage)
+    console.log("subscribers", this.subscribers)
+  }
+
   public async subscribe(id: Number, paths: Array<string>, subscriber: ISubscriber): Promise<IPage[]> {
     this.subscribers.set(
       id,
