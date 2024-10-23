@@ -72,7 +72,7 @@ export const REST_TIME = [
   },
   {daysOfWeek,display,
       startTime: '0:00:00',
-      endTime: '7:30:00',
+      endTime: '8:00:00',
       color: COLOUR_REST,
   },
   {daysOfWeek,display,
