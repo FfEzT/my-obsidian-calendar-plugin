@@ -2,7 +2,7 @@ import { IPluginSettings } from "./types"
 
 // TODO сюда переместить цвета да и остальные параметры
 export const DEFAULT_SETTINGS: Partial<IPluginSettings> = {
-
+  withStatusCorrector: true
 }
 
 export enum CACHE_ID {
