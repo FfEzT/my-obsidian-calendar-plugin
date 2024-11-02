@@ -37,7 +37,7 @@ export default class StatusCorrector {
     }
 
     checkDate: {
-      const checks = [TEXT_SOON, TEXT_BLOCKED]
+      const checks = [TEXT_SOON, TEXT_BLOCKED, TEXT_CHILD_IN_PROGRESS]
       if (page.date && checks.indexOf(status as string) != -1) {
         status = TEXT_IN_PROGRESS
       }
@@ -131,7 +131,6 @@ export default class StatusCorrector {
     }
 
     for (let pointer = queuePaths.length-1; pointer > 0; --pointer) {
-      console.log(queuePaths[pointer])
       await this.correctNote(
         this.parent.cache.getPage(
           queuePaths[pointer]
