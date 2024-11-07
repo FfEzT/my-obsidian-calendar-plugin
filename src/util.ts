@@ -184,7 +184,7 @@ export function getTicksFromText(text: string): ITick[] {
     ? 'x'
     : dv.duration(args[3]?.trim())
 
-    if (name == '' || !date)
+    if (name == '')
       continue
 
     result.push(
