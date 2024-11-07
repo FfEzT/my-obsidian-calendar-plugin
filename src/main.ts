@@ -104,7 +104,7 @@ export default class MyPlugin extends Plugin {
     const property = CalendarEventToIDate(event)
     const date = property["date"].toISOString().slice(0,-14)
 
-    const regExp = new RegExp(`\\[t::\\s*${tickname},.*\]`, "gm")
+    const regExp = new RegExp(`\\[t::\\s*${tickname},?.*\]`, "gm")
     const newString = `[t::${tickname},${date},${property["timeStart"]},${property['duration']}]`
     await this.app.vault.modify(
       tFile,
