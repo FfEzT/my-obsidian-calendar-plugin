@@ -131,9 +131,9 @@ export class Cache {
     if (!this.isInited)
       return
 
-    this.storage.delete(file.path)
-
     const page = this.storage.get(file.path) as IPage
+
+    this.storage.delete(file.path)
     for (let [_, {paths, subscriber}] of this.subscribers) {
       for (let path of paths) {
         if (!file.path.startsWith(path))
