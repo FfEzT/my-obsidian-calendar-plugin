@@ -318,6 +318,9 @@ export async function getNotesWithoutParent(src: string): Promise<IPage[]> {
 export async function isNotDone(note: IPage): Promise<boolean> {
   await waitDvInit()
 
+  // NOTE for update cache of DV
+  await sleep(SLEEP_TIME)
+
   let countAll  = 0
   let countDone = 0
 
@@ -363,6 +366,9 @@ export async function isNotDone(note: IPage): Promise<boolean> {
 // TODO refactor
 export async function isStarted(note: IPage): Promise<boolean> {
   await waitDvInit()
+
+  // NOTE for update cache of DV
+  await sleep(SLEEP_TIME)
 
   // let countAll  = 0
   let countDone = 0
