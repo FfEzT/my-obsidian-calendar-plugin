@@ -108,6 +108,11 @@ export default class StatusCorrector {
   }
 
   public async correctAllNotes() {
+    const notice = new Notice(
+      "StatusCorrector: Start checking notes",
+      1000 * 60 // 60 seconds
+    )
+
     const queuePaths: string[] = []
     const set = new Set<string>()
 
@@ -131,6 +136,9 @@ export default class StatusCorrector {
     }
 
     for (let pointer = queuePaths.length-1; pointer > 0; --pointer) {
+      let i = queuePaths.length - pointer - 1
+      notice.setMessage(`StatusCorrector: ${i}/${queuePaths.length}`)
+
       await this.correctNote(
         this.parent.cache.getPage(
           queuePaths[pointer]
@@ -138,7 +146,12 @@ export default class StatusCorrector {
       )
     }
 
-    new Notice("Notes has been checked")
+    notice.setMessage("StatusCorrector: Notes has been checked")
+    setTimeout(
+      () => notice.hide(),
+      3000
+    )
+
   }
 
   public destroy() {
