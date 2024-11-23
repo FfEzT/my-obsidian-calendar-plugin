@@ -152,6 +152,7 @@ export default class StatusCorrector {
       3000
     )
 
+    new Notice("StatusCorrector: Notes has been checked")
   }
 
   public destroy() {
