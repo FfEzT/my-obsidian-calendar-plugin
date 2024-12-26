@@ -93,7 +93,7 @@ export class Cache {
     if (!this.isInited)
       return
 
-    const page = await this.parrentPointer.getPage(file)
+    const page = await this.parrentPointer.fileManager.getPage(file)
     this.storage.set(file.path, page)
 
     for (let [_, {paths, subscriber}] of this.subscribers) {
@@ -110,7 +110,7 @@ export class Cache {
     if (!this.isInited)
       return
 
-    const page = await this.parrentPointer.getPage(file)
+    const page = await this.parrentPointer.fileManager.getPage(file)
     const oldPage = this.storage.get(file.path) as IPage
     if (isEqualObj(page, oldPage))
       return
@@ -162,7 +162,7 @@ export class Cache {
     for (let tFile of tFiles) {
       this.storage.set(
         tFile.path,
-        await this.parrentPointer.getPage(tFile)
+        await this.parrentPointer.fileManager.getPage(tFile)
       )
     }
 
