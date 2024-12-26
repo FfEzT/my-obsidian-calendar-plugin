@@ -21,7 +21,7 @@ export class MySettingTab extends PluginSettingTab {
 
     const statusCorrector = settings.statusCorrector.isOn
     new Setting(containerEl)
-      .setName("Enable tool")
+      .setName("Enable tool") // TODO при смене выключать в текущей сессии инструмент, а не при перезагрузке
       .addToggle(
         toggle =>
           toggle

@@ -108,7 +108,7 @@ export function renderCalendar(
         nowIndicator: true,
         scrollTimeReset: false,
         dayMaxEvents: true,
-        slotDuration: '00:15:00',
+        slotDuration: '00:30:00',
 
         headerToolbar: !isNarrow
             ? {
