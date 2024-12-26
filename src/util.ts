@@ -304,6 +304,21 @@ async function waitDvInit() {
     await sleep(SLEEP_TIME)
 }
 
+let haveChanged = false
+let interval: NodeJS.Timer
+export function setChanged() {
+  if (haveChanged) {
+    clearInterval(interval)
+  }
+
+  haveChanged = true
+  interval = setInterval(
+    () => haveChanged = false,
+    SLEEP_TIME
+  )
+}
+
+
 export async function getNotesWithoutParent(src: string): Promise<IPage[]> {
   await waitDvInit()
 
@@ -319,7 +334,8 @@ export async function isNotDone(note: IPage): Promise<boolean> {
   await waitDvInit()
 
   // NOTE for update cache of DV
-  await sleep(SLEEP_TIME)
+  if (haveChanged)
+    await sleep(SLEEP_TIME)
 
   let countAll  = 0
   let countDone = 0
@@ -368,7 +384,8 @@ export async function isStarted(note: IPage): Promise<boolean> {
   await waitDvInit()
 
   // NOTE for update cache of DV
-  await sleep(SLEEP_TIME)
+  if (haveChanged)
+    await sleep(SLEEP_TIME)
 
   // let countAll  = 0
   let countDone = 0

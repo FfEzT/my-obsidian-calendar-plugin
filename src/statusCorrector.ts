@@ -1,8 +1,8 @@
 import { Notice } from "obsidian"
-import { TEXT_BLOCKED, TEXT_DONE, TEXT_SOON, EVENT_SRC, TEXT_IN_PROGRESS, TEXT_CHILD_IN_PROGRESS } from "./constants"
+import { TEXT_BLOCKED, TEXT_DONE, TEXT_SOON, EVENT_SRC, TEXT_IN_PROGRESS, TEXT_CHILD_IN_PROGRESS, MSG_PLG_NAME } from "./constants"
 import MyPlugin from "./main"
 import { IPage } from "./types"
-import { getNotesWithoutParent, isNotDone, isStarted, getParentNote, getChildNotePaths } from "./util"
+import { getNotesWithoutParent, isNotDone, isStarted, getParentNote, getChildNotePaths, setChanged } from "./util"
 
 export default class StatusCorrector {
   private parent: MyPlugin
@@ -15,10 +15,6 @@ export default class StatusCorrector {
     this.event_src = event_src
 
     this.parent.cache.subscribe(this.idForCache, this.event_src, this)
-    // TODO добавить флаг в настройки (типа запускать ли чекер при загрузке)
-    .then(
-      () => this.correctAllNotes()
-    )
   }
 
   private async correctNote(page: IPage): Promise<boolean> {
@@ -33,7 +29,7 @@ export default class StatusCorrector {
       else if (status == TEXT_SOON && await isStarted(page)) {
         status = TEXT_BLOCKED
       }
-      // TODO проверка, что все задачи на нуле, то ставим not started (если до этого было не soon)
+      // TODO Подумать: проверка, что все задачи на нуле, то ставим not started (если до этого было не soon)
     }
 
     checkDate: {
@@ -102,14 +98,16 @@ export default class StatusCorrector {
       return false
 
     page.status = status
-    await this.parent.changeStatusFile(page.file.path, status)
+    await this.parent.fileManager.changeStatusFile(page.file.path, status)
+    
+    setChanged()
 
     return true
   }
 
   public async correctAllNotes() {
     const notice = new Notice(
-      "StatusCorrector: Start checking notes",
+      MSG_PLG_NAME + "Start checking status of notes",
       1000 * 60 // 60 seconds
     )
 
@@ -137,7 +135,7 @@ export default class StatusCorrector {
 
     for (let pointer = queuePaths.length-1; pointer > 0; --pointer) {
       let i = queuePaths.length - pointer - 1
-      notice.setMessage(`StatusCorrector: ${i}/${queuePaths.length}`)
+      notice.setMessage(`${MSG_PLG_NAME}(status) ${i}/${queuePaths.length}`)
 
       await this.correctNote(
         this.parent.cache.getPage(
@@ -146,7 +144,7 @@ export default class StatusCorrector {
       )
     }
 
-    notice.setMessage("StatusCorrector: Notes has been checked")
+    notice.setMessage(MSG_PLG_NAME + "Status of Notes has been checked")
     setTimeout(
       () => notice.hide(),
       3000
@@ -156,6 +154,8 @@ export default class StatusCorrector {
   }
 
   public destroy() {
+    // TODO: при вызове завершать запуск statusCorrector
+
     this.parent.cache.unsubscribe(this.idForCache)
   }
 

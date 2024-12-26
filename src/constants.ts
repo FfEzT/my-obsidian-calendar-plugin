@@ -1,8 +1,13 @@
 import { IPluginSettings } from "./types"
 
+export const MSG_PLG_NAME = "MyCalendar: "
+
 // TODO сюда переместить цвета да и остальные параметры
-export const DEFAULT_SETTINGS: Partial<IPluginSettings> = {
-  withStatusCorrector: true
+export const DEFAULT_SETTINGS: IPluginSettings = {
+  statusCorrector: {
+    isOn: true,
+    startOnStartUp: true
+  }
 }
 
 export enum CACHE_ID {

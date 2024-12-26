@@ -117,7 +117,7 @@ export class CalendarView extends ItemView implements MyView {
 
       eventClick: (arg: any) => {
           const {event, jsEvent} = arg
-          this.parrentPointer.openNote(event)
+          this.parrentPointer.fileManager.openNote(event)
       },
       modifyEvent: async (newPos: any, oldPos: any) => {
         const props = newPos.extendedProps
@@ -128,9 +128,9 @@ export class CalendarView extends ItemView implements MyView {
         }
 
         if (props.notePath)
-          this.parrentPointer.changeTickFile(props.notePath, props.tickName, event)
+          this.parrentPointer.fileManager.changeTickFile(props.notePath, props.tickName, event)
         else
-          this.parrentPointer.changePropertyFile(newPos.id, event)
+          this.parrentPointer.fileManager.changePropertyFile(newPos.id, event)
 
         // true for update place in Calendar
         return true
@@ -144,11 +144,11 @@ export class CalendarView extends ItemView implements MyView {
                 throw 1
 
               const pathOfFile = PLACE_FOR_CREATING_NOTE + `/${nameOfFile}.md`
-              await this.parrentPointer.createFile(pathOfFile)
+              await this.parrentPointer.fileManager.createFile(pathOfFile)
 
               // TODO подумать, как убрать TimeOut
               setTimeout(
-                () => this.parrentPointer.changePropertyFile(pathOfFile, {start, end, allDay}),
+                () => this.parrentPointer.fileManager.changePropertyFile(pathOfFile, {start, end, allDay}),
                 1500
               )
             }
@@ -179,7 +179,7 @@ export class CalendarView extends ItemView implements MyView {
     const menu = new Menu
     menu.addItem(
       (item) => item.setTitle(event.id)
-        .onClick(async () => this.parrentPointer.openNote(event))
+        .onClick(async () => this.parrentPointer.fileManager.openNote(event))
     )
     // menu.addSeparator()
 

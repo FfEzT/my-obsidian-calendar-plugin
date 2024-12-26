@@ -1,16 +1,18 @@
-import { App, TFile } from "obsidian";
+import { App, Notice, TFile } from "obsidian";
 import MyPlugin from "./main";
 import { CalendarEvent, IEvent, IPage } from "./types";
 import { CalendarEventToIDate, dv, getTicksFromText } from "./util";
+import { MSG_PLG_NAME } from "./constants";
 
 export default class FileManager {
   constructor(plg: MyPlugin) {
+    this.parentPointer = plg
     this.app = plg.app
   }
 
   public async createFile(path: string) {
     await this.app.vault.create(path, '')
-    this.parentPointer.createNotice("created " + path)
+    new Notice(MSG_PLG_NAME + "created " + path)
   }
 
   public async changePropertyFile(path: string, event: CalendarEvent) {
@@ -24,6 +26,17 @@ export default class FileManager {
           property['date']      = property_['date'].toISOString().slice(0,-14)
           property['timeStart'] = property_['timeStart']
           property['duration']  = property_['duration']
+      }
+    )
+  }
+
+  public async changeStatusFile(path: string, status: string) {
+    // NOTE это отправит сигнал cache
+    const tFile = this.app.metadataCache.getFirstLinkpathDest(path, '') as TFile
+    await this.app.fileManager.processFrontMatter(
+      tFile,
+      property => {
+          property['status'] = status
       }
     )
   }
@@ -58,7 +71,7 @@ export default class FileManager {
     tFile && leaf.openFile(tFile)
   }
 
-  async getPage(file: TFile): Promise<IPage> {
+  public async getPage(file: TFile): Promise<IPage> {
     let result: IPage = {
       file: {
         path: "",

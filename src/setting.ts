@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, Plugin } from "obsidian";
+import { App, PluginSettingTab, Setting } from "obsidian";
 import MyPlugin from "./main";
 
 export class MySettingTab extends PluginSettingTab {
@@ -9,13 +9,45 @@ export class MySettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
-  display(): void {
+  display() {
     let { containerEl } = this;
-
     containerEl.empty();
 
-    // TODO
+    const settings = this.plugin.getSettings()
+
+    // Status Corrector
+    new Setting(containerEl).setName("StatusCorrector").setHeading()
+    // .setDesc("This is Description")
+
+    const statusCorrector = settings.statusCorrector.isOn
     new Setting(containerEl)
+      .setName("Enable tool")
+      .addToggle(
+        toggle =>
+          toggle
+            .setValue(statusCorrector)
+            .onChange(
+              value => {
+                settings.statusCorrector.isOn = value
+                this.plugin.saveSettings(settings)
+
+                this.display()
+              }
+            )
+      )
+      if (statusCorrector) {
+        new Setting(containerEl)
+          .setName("Start on Start Up")
+          .addToggle(
+            toggle => toggle.setValue(settings.statusCorrector.startOnStartUp)
+              .onChange(
+                val => {
+                  settings.statusCorrector.startOnStartUp = val
+                  this.plugin.saveSettings(settings)
+                }
+              )
+          )
+      }
       // .setName("Date format")
       // .setDesc("Default date format")
       // .addText((text) =>

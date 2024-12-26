@@ -3,8 +3,10 @@ import { DURATION_TYPES } from "obsidian-dataview"
 // TODO записать сюда цвета и другие параметры
 // + разбиение сетки (5 минут, 10)
 export interface IPluginSettings {
-  withStatusCorrector: boolean,
-  startStatusCorrectorOnStartUp: boolean
+  statusCorrector: {
+    isOn: boolean,
+    startOnStartUp: boolean
+  }
 }
 
 export interface IDate {

@@ -1,26 +1,38 @@
 // import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, ItemView, Platform, WorkspaceLeaf } from 'obsidian';
-import { Notice, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
+import { App, Notice, Plugin, PluginManifest, TFile, WorkspaceLeaf } from 'obsidian';
 import { CalendarView, VIEW_TYPE } from "./view"
 import { Cache } from "./cache"
 import { IPluginSettings } from './types';
 import { MySettingTab } from './setting';
-import { DEFAULT_SETTINGS, EVENT_SRC, CACHE_ID } from './constants';
+import { DEFAULT_SETTINGS, EVENT_SRC, CACHE_ID, MSG_PLG_NAME } from './constants';
 import StatusCorrector from './statusCorrector';
 import FileManager from './fileManager';
 
 
-// TODO to constants
-const MSG_PLG_NAME = "MyCalendar: "
-
 export default class MyPlugin extends Plugin {
-  public cache = new Cache(this)
-  public fileManager = new FileManager(this)
+  // ! IMPORTANT: fileManager is First
+  public fileManager: FileManager
+  public cache: Cache
+
+  private statusCorrector: StatusCorrector
+
+  constructor(app: App, manifest: PluginManifest) {
+    super(app, manifest)
+
+    this.fileManager = new FileManager(this)
+    this.cache = new Cache(this)
+  }
 
   public async onload() {
     await this.loadSettings()
 
-    if (this.settings.withStatusCorrector) {
+    this.initRegister()
+
+    if (this.settings.statusCorrector.isOn) {
       this.statusCorrector = new StatusCorrector(CACHE_ID.STATUS_CORRECTOR, [EVENT_SRC], this)
+
+      if (this.settings.statusCorrector.startOnStartUp)
+        this.statusCorrector.correctAllNotes()
 
       this.addCommand({
         id: 'fullStatusCorrect',
@@ -52,27 +64,13 @@ export default class MyPlugin extends Plugin {
         this.cache.log()
       }
     });
-
-    this.initRegister()
   }
 
   public onunload() {
-    if (this.settings.withStatusCorrector)
+    // TODO как будто других не хватает destoy
+    if (this.settings.statusCorrector.isOn)
       this.statusCorrector.destroy()
   }
-
-  public createNotice(str: string) {
-    new Notice(MSG_PLG_NAME + str)
-  }
-
-  public async saveSettings() {
-    await this.saveData(this.settings);
-  }
-
-
-  private statusCorrector: StatusCorrector
-
-  private settings: IPluginSettings
 
   private initRegister() {
     this.registerEvent(
@@ -132,9 +130,26 @@ export default class MyPlugin extends Plugin {
       leaf.detach()
   }
 
+
+  // Settings
+
+  public getSettings(): IPluginSettings {
+    // NOTE: full copy
+    return JSON.parse(
+      JSON.stringify(this.settings)
+    )
+  }
+
+  public async saveSettings(settings: IPluginSettings) {
+    this.settings = settings
+    await this.saveData(this.settings);
+  }
+
+
+  private settings: IPluginSettings
+
   private async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-
     this.addSettingTab(new MySettingTab(this.app, this));
   }
 }
