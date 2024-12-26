@@ -9,12 +9,23 @@ export default class StatusCorrector {
   private idForCache: number
   private event_src: string[]
 
+  private subscribed = false
+  private whileSubscribing = new Promise(
+    (resolve) => this.resolveSubscribing = resolve
+  )
+  private resolveSubscribing: (value: void | PromiseLike<void>) => void
+
   constructor(idForCache: number, event_src: string[], parrentPointer: MyPlugin) {
     this.parent = parrentPointer
     this.idForCache = idForCache
     this.event_src = event_src
 
-    this.parent.cache.subscribe(this.idForCache, this.event_src, this)
+    this.parent.cache.subscribe(this.idForCache, this.event_src, this).then(
+      () => {
+        this.subscribed = true
+        this.resolveSubscribing()
+      }
+    )
   }
 
   private async correctNote(page: IPage): Promise<boolean> {
@@ -110,6 +121,10 @@ export default class StatusCorrector {
       MSG_PLG_NAME + "Start checking status of notes",
       1000 * 60 // 60 seconds
     )
+
+    if (!this.subscribed) {
+      await this.whileSubscribing
+    }
 
     const queuePaths: string[] = []
     const set = new Set<string>()
