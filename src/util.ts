@@ -1,4 +1,4 @@
-import { IEvent, IPage, ITick, IDate, CalendarEvent } from "./types";
+import { IEvent, IPage, ITick, IDate, CalendarEvent, ITasks } from "./types";
 import { DataviewApi } from "obsidian-dataview/lib/api/plugin-api"
 import { getAPI } from "obsidian-dataview"
 
@@ -19,6 +19,9 @@ import {
   BACKGROUND_COLOUR,
   COLOUR_DEFAULT
 } from "./constants"
+import { Cache } from "./cache";
+import FileManager from "./fileManager";
+import MyPlugin from "./main";
 
 const SLEEP_TIME = 1000 // ms
 
@@ -329,88 +332,36 @@ export async function getNotesWithoutParent(src: string): Promise<IPage[]> {
   return child as IPage[]
 }
 
-// TODO refactor
-export async function isNotDone(note: IPage): Promise<boolean> {
+export async function getProgress(plg: MyPlugin, page: IPage): Promise<ITasks> {
+  const result = {done:0, all:0}
+  const cache = plg.cache
+  const fileManager = plg.fileManager
+
   await waitDvInit()
 
-  // NOTE for update cache of DV
-  if (haveChanged)
-    await sleep(SLEEP_TIME)
-
-  let countAll  = 0
-  let countDone = 0
-
   const pages = new Set()
-  const stack = [note.file.path]
+  const stack = [page.file.path]
   while (stack.length > 0) {
-    const meta = dv.page(stack.pop())
+    const path = stack.pop() as string
+    const page = cache.getPage(path)
+    const meta = dv.page(path)
 
-    if (!meta)
+    if (!page || !meta)
       continue
 
-    countAll  += calcAllTasks(meta.file)
-    countDone += calcDoneTasks(meta.file)
+    const tasks = fileManager.getTaskCount(page)
 
-    if (countAll != countDone)
-      return true
+    result.all  +=  tasks.all
+    result.done  +=  tasks.done
+
 
     const inlinks = meta.file.inlinks.array()
     if (inlinks.length == 0) {
       if (meta.status) {
-        ++countAll
+        ++result.all
 
         if (meta.status == TEXT_DONE)
-          ++countDone
-      }
-
-      if (countAll != countDone)
-        return true
-    }
-
-    for (let inlink of inlinks ) {
-      if (pages.has(inlink.path))
-        continue
-
-      pages.add(inlink.path)
-      stack.push(inlink.path)
-    }
-  }
-
-  return countAll != countDone
-}
-
-// TODO refactor
-export async function isStarted(note: IPage): Promise<boolean> {
-  await waitDvInit()
-
-  // NOTE for update cache of DV
-  if (haveChanged)
-    await sleep(SLEEP_TIME)
-
-  // let countAll  = 0
-  let countDone = 0
-
-  const pages = new Set()
-  const stack = [note.file.path]
-  while (stack.length > 0) {
-    const meta = dv.page(stack.pop())
-
-    if (!meta)
-      continue
-
-    // countAll  += calcAllTasks(meta.file)
-    countDone += calcDoneTasks(meta.file)
-
-    if (countDone)
-      return true
-
-    const inlinks = meta.file.inlinks.array()
-    if (inlinks.length == 0) {
-      if (meta.status) {
-        // ++countAll
-
-        if (meta.status == TEXT_DONE)
-          return true
+          ++result.done
       }
     }
 
@@ -423,22 +374,7 @@ export async function isStarted(note: IPage): Promise<boolean> {
     }
   }
 
-  return false
-}
-
-const calcDoneTasks = (page: any) => {
-  let countDone = 0
-  for (let i of page.tasks.array()) {
-    const strInStatus = i.status.trim()
-    if (!!strInStatus)
-      ++countDone
-  }
-
-  return countDone
-}
-
-const calcAllTasks = (page: any) => {
-  return page.tasks.array().length
+  return result
 }
 
 export async function getChildNotePaths(path: string): Promise<string[]> {

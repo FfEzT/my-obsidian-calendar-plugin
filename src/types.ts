@@ -67,3 +67,8 @@ export interface ISubscriber {
   changeFile(newPage: IPage, oldPage: IPage): void
   reset(): void
 }
+
+export interface ITasks {
+  done: number,
+  all: number
+}

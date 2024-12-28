@@ -2,7 +2,7 @@ import { Notice } from "obsidian"
 import { TEXT_BLOCKED, TEXT_DONE, TEXT_SOON, EVENT_SRC, TEXT_IN_PROGRESS, TEXT_CHILD_IN_PROGRESS, MSG_PLG_NAME } from "./constants"
 import MyPlugin from "./main"
 import { IPage } from "./types"
-import { getNotesWithoutParent, isNotDone, isStarted, getParentNote, getChildNotePaths, setChanged } from "./util"
+import { getNotesWithoutParent, getParentNote, getChildNotePaths, setChanged, getProgress } from "./util"
 
 export default class StatusCorrector {
   private parent: MyPlugin
@@ -34,13 +34,13 @@ export default class StatusCorrector {
       return false
 
     checkProgress: {
-      if (status == TEXT_DONE && await isNotDone(page)) {
+      const tasks = await getProgress(this.parent, page)
+      if (status == TEXT_DONE && tasks.all != tasks.done) {
         status = TEXT_IN_PROGRESS
       }
-      else if (status == TEXT_SOON && await isStarted(page)) {
+      else if (status == TEXT_SOON && tasks.done != 0) {
         status = TEXT_BLOCKED
       }
-      // TODO Подумать: проверка, что все задачи на нуле, то ставим not started (если до этого было не soon)
     }
 
     checkDate: {

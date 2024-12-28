@@ -1,6 +1,6 @@
 import MyPlugin from "./main"
 import { TAbstractFile, TFile } from "obsidian"
-import { IPage, MyView, ISubscriber } from "./types"
+import { IPage, ISubscriber } from "./types"
 import { isEqualObj } from "./util"
 
 interface IPathSubscriber {

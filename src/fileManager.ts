@@ -1,12 +1,11 @@
 import { App, Notice, TFile } from "obsidian";
 import MyPlugin from "./main";
-import { CalendarEvent, IEvent, IPage } from "./types";
+import { CalendarEvent, IEvent, IPage, ITasks } from "./types";
 import { CalendarEventToIDate, dv, getTicksFromText } from "./util";
 import { MSG_PLG_NAME } from "./constants";
 
 export default class FileManager {
   constructor(plg: MyPlugin) {
-    this.parentPointer = plg
     this.app = plg.app
   }
 
@@ -114,6 +113,31 @@ export default class FileManager {
     return result
   }
 
-  private parentPointer: MyPlugin
+  public getTaskCount(page: IPage): ITasks {
+    const result = {
+      done: 0,
+      all: 0
+    }
+
+    const tFile = this.app.vault.getFileByPath(page.file.path)
+
+    if (!tFile)
+      return result
+
+    const items = this.app.metadataCache.getFileCache(tFile)?.listItems
+
+    if (items) for (let item of items) {
+      if (item.task == undefined)
+        continue
+
+      if (item.task == 'x') {
+        ++result.done
+      }
+      ++result.all
+    }
+
+    return result
+  }
+
   private app: App
 }
