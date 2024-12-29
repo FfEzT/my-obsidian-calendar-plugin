@@ -357,10 +357,10 @@ export async function getProgress(plg: MyPlugin, page: IPage): Promise<ITasks> {
 
     const inlinks = meta.file.inlinks.array()
     if (inlinks.length == 0) {
-      if (meta.status) {
+      if (page.status) {
         ++result.all
 
-        if (meta.status == TEXT_DONE)
+        if (page.status == TEXT_DONE)
           ++result.done
       }
     }
