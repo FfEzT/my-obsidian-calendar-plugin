@@ -193,7 +193,7 @@ export default class StatusCorrector {
       const oldStatus = page.status
 
       const isChanged = await this.correctNote(page)
-      if (!isChanged || page.status == oldPage.status)
+      if (!isChanged && page.status == oldPage.status)
         continue
       
       new Notice(
