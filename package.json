@@ -28,6 +28,7 @@
 		"@fullcalendar/icalendar": "^6.1.15",
 		"@fullcalendar/interaction": "^6.1.15",
 		"@fullcalendar/list": "^6.1.15",
+		"@fullcalendar/multimonth": "^6.1.15",
 		"@fullcalendar/rrule": "^6.1.15",
 		"@fullcalendar/timegrid": "^6.1.15",
 		"obsidian-dataview": "^0.5.67"

@@ -15,6 +15,9 @@ export enum CACHE_ID {
   STATUS_CORRECTOR
 }
 
+// TODO
+// export slotDuration = '00:30:00'
+
 const COLOUR_REST  = '#305B60'
 const COLOUR_SLEEP = '#cc0000'
 export const COLOUR_FREQUENCY = "#8A1717"

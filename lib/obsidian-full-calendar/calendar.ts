@@ -9,6 +9,7 @@ import {
     EventSourceInput,
 } from "@fullcalendar/core";
 import dayGridPlugin from "@fullcalendar/daygrid";
+// import multiMonthPlugin from '@fullcalendar/multimonth'
 import timeGridPlugin from "@fullcalendar/timegrid";
 import rrulePlugin from "@fullcalendar/rrule";
 import listPlugin from "@fullcalendar/list";
@@ -94,6 +95,7 @@ export function renderCalendar(
             dayGridPlugin,
             timeGridPlugin,
             listPlugin,
+            // multiMonthPlugin,
             // Drag + drop and editing
             interactionPlugin,
             // Remote sources
@@ -102,43 +104,47 @@ export function renderCalendar(
             rrulePlugin,
         ],
         googleCalendarApiKey: "AIzaSyDIiklFwJXaLWuT_4y6I9ZRVVsPuf4xGrk",
-        initialView:
+        initialView: 
             settings?.initialView?.[isNarrow ? "mobile" : "desktop"] ||
             (isNarrow ? "timeGrid3Days" : "timeGridWeek"),
         nowIndicator: true,
         scrollTimeReset: false,
         dayMaxEvents: true,
+        // TODO add to const
+        expandRows:true,
         slotDuration: '00:30:00',
+        // multiMonthMaxColumns: 1,
 
         headerToolbar: !isNarrow
             ? {
                   left: "prev,next today",
                   center: "title",
-                  right: "dayGridMonth,timeGridWeek,listWeek",
+                  right: "dayGridMonth,timeGridWeek,listWeek,dayGridYear",
               }
             : !isMobile
             ? {
                   right: "today,prev,next",
-                  left: "dayGridMonth,timeGrid3Days,listWeek",
+                  left: "dayGridMonth,timeGrid3Days,listWeek,dayGridYear",
               }
             : false,
         footerToolbar: isMobile
             ? {
                   right: "today,prev,next",
-                  left: "timeGrid3Days,dayGridMonth,timeGridWeek,listWeek",
+                  left: "timeGrid3Days,dayGridMonth,dayGridYear,timeGridWeek,listWeek",
               }
             : false,
 
         views: {
-            timeGridDay: {
-                type: "timeGrid",
-                duration: { days: 1 },
-                buttonText: isNarrow ? "1" : "day",
-            },
             timeGrid3Days: {
                 type: "timeGrid",
                 duration: { days: 3 },
                 buttonText: "3",
+            },
+            dayGridMonth: {
+              dayMaxEvents: false,
+            },
+            dayGridYear: {
+              dayMaxEvents: false,
             },
         },
         firstDay: settings?.firstDay,
