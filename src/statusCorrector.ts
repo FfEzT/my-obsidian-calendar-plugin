@@ -2,7 +2,7 @@ import { Notice } from "obsidian"
 import { TEXT_BLOCKED, TEXT_DONE, TEXT_SOON, EVENT_SRC, TEXT_IN_PROGRESS, TEXT_CHILD_IN_PROGRESS, MSG_PLG_NAME } from "./constants"
 import MyPlugin from "./main"
 import { IPage } from "./types"
-import { getNotesWithoutParent, getParentNote, getChildNotePaths, setChanged, getProgress } from "./util"
+import { getNotesWithoutParent, getParentNote, getChildNotePaths, getProgress } from "./util"
 
 export default class StatusCorrector {
   private parent: MyPlugin
@@ -110,8 +110,6 @@ export default class StatusCorrector {
 
     page.status = status
     await this.parent.fileManager.changeStatusFile(page.file.path, status)
-    
-    setChanged()
 
     return true
   }
@@ -195,7 +193,7 @@ export default class StatusCorrector {
       const oldStatus = page.status
 
       const isChanged = await this.correctNote(page)
-      if (!isChanged && page.status == oldPage.status)
+      if (!isChanged || page.status == oldPage.status)
         continue
       
       new Notice(

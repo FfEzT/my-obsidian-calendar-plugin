@@ -307,21 +307,6 @@ async function waitDvInit() {
     await sleep(SLEEP_TIME)
 }
 
-let haveChanged = false
-let interval: NodeJS.Timer
-export function setChanged() {
-  if (haveChanged) {
-    clearInterval(interval)
-  }
-
-  haveChanged = true
-  interval = setInterval(
-    () => haveChanged = false,
-    SLEEP_TIME
-  )
-}
-
-
 export async function getNotesWithoutParent(src: string): Promise<IPage[]> {
   await waitDvInit()
 
