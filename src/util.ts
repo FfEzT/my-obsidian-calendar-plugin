@@ -1,11 +1,8 @@
-import { IEvent, IPage, ITick, IDate, CalendarEvent, ITasks } from "./types";
+import { IPage, ITick, IDate, CalendarEvent, ITasks } from "./types";
 import { DataviewApi } from "obsidian-dataview/lib/api/plugin-api"
 import { getAPI } from "obsidian-dataview"
 
 import {
-  COLOUR_FREQUENCY,
-  COLOUR_DONE,
-  COLOUR_TICK,
   TEXT_DONE,
   FORMAT_DEFAULT_ADD,
   DEFAULT_ADD,
@@ -17,58 +14,12 @@ import {
   FORMAT_HOUR,
   FORMAT_MINUTE,
   BACKGROUND_COLOUR,
-  COLOUR_DEFAULT
 } from "./constants"
-import { Cache } from "./cache";
-import FileManager from "./fileManager";
 import MyPlugin from "./main";
 
 const SLEEP_TIME = 1000 // ms
 
 export const dv = getAPI() as DataviewApi
-
-export function pageToEvents(page: IPage): IEvent[] {
-  const result: IEvent[] = []
-
-  const structureTemplate = {
-    id: "",
-    title: "",
-    color: COLOUR_DEFAULT,
-    borderColor: getColourFromPath(page.file.path),
-    editable: true,
-  }
-
-  if (page.date) {
-    const structure: IEvent = {
-      ...structureTemplate,
-      id: page.file.path,
-      title: page.file.name,
-      ...IDateToCalendarEvent(page)
-    }
-    if (page.frequency)
-      structure.color = COLOUR_FREQUENCY
-    if (page.status == TEXT_DONE)
-        structure.color = COLOUR_DONE
-
-    result.push(structure)
-  }
-  for (let tick of page.ticks) {
-    const structure: IEvent = {
-      ...structureTemplate,
-      id: templateIDTick(page.file.path, tick.name),
-      title: templateNameTick(page.file.name, tick.name),
-      color: COLOUR_TICK,
-      extendedProps: {
-        tickName: tick.name,
-        notePath: page.file.path
-      },
-      ...IDateToCalendarEvent(tick)
-    }
-    result.push(structure)
-  }
-
-  return result
-}
 
 function pathToFileWithoutFileName(path: string) {
   const path_separator = path.lastIndexOf("/");
@@ -280,7 +231,7 @@ function toRange(src: number, min: number, max: number) {
   return (src + min)
 }
 
-function getColourFromPath(path: string): string {
+export function getColourFromPath(path: string): string {
   const str = pathToFileWithoutFileName(path)
 
   // NOTE типа каждый первый, второй или третий символ строки

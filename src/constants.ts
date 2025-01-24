@@ -2,11 +2,46 @@ import { IPluginSettings } from "./types"
 
 export const MSG_PLG_NAME = "MyCalendar: "
 
-// TODO сюда переместить цвета да и остальные параметры
+const daysOfWeek = [ '1','2','3','4','5','6','0' ] // these recurrent events move separately
+const display = 'background'
+export const COLOUR_REST  = '#305B60'
+export const COLOUR_SLEEP = '#cc0000'
+
 export const DEFAULT_SETTINGS: IPluginSettings = {
   statusCorrector: {
     isOn: true,
     startOnStartUp: true
+  },
+  calendar: {
+    slotDuration: "00:30:00",
+    colours: {
+      frequency: "#8A1717",
+      done     : "#008E04",
+      tick     : "#457E7E",
+      default  : "#5e3fa8",
+    },
+    restTime: [
+      {daysOfWeek,display,
+          startTime: '0:00:00',
+          endTime: '8:00:00',
+          color: COLOUR_SLEEP,
+      },
+      {daysOfWeek,display,
+          startTime: '24:00:00',
+          endTime: '24:00:00',
+          color: COLOUR_SLEEP,
+      },
+      {daysOfWeek,display,
+          startTime: '0:00:00',
+          endTime: '8:30:00',
+          color: COLOUR_REST,
+      },
+      {daysOfWeek,display,
+          startTime: '23:00:00',
+          endTime: '24:00:00',
+          color: COLOUR_REST,
+      }
+    ]
   }
 }
 
@@ -15,15 +50,6 @@ export enum CACHE_ID {
   STATUS_CORRECTOR
 }
 
-// TODO
-// export slotDuration = '00:30:00'
-
-const COLOUR_REST  = '#305B60'
-const COLOUR_SLEEP = '#cc0000'
-export const COLOUR_FREQUENCY = "#8A1717"
-export const COLOUR_DONE      = "#008E04"
-export const COLOUR_TICK      = "#457E7E"
-export const COLOUR_DEFAULT   = "#5e3fa8"
 
 // TODO переделать в TEXT = {DONE...BLOCKED}
 export const TEXT_DONE = "🟢done"
@@ -63,31 +89,6 @@ export const BACKGROUND_COLOUR = {
     }
 }
 
-const daysOfWeek = [ '1','2','3','4','5','6','0' ] // these recurrent events move separately
-const display = 'background'
-
-export const REST_TIME = [
-  {daysOfWeek,display,
-      startTime: '0:00:00',
-      endTime: '8:00:00',
-      color: COLOUR_SLEEP,
-  },
-  {daysOfWeek,display,
-      startTime: '24:00:00',
-      endTime: '24:00:00',
-      color: COLOUR_SLEEP,
-  },
-  {daysOfWeek,display,
-      startTime: '0:00:00',
-      endTime: '8:30:00',
-      color: COLOUR_REST,
-  },
-  {daysOfWeek,display,
-      startTime: '23:00:00',
-      endTime: '24:00:00',
-      color: COLOUR_REST,
-  }
-]
 
 const MillisecsInSecond = 1000
 const SecsInMinute = 60

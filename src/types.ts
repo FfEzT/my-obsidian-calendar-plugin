@@ -1,16 +1,30 @@
 import { DURATION_TYPES } from "obsidian-dataview"
 
-// TODO записать сюда цвета и другие параметры
-// + разбиение сетки (5 минут, 10)
 export interface IPluginSettings {
   statusCorrector: {
     isOn: boolean,
     startOnStartUp: boolean
+  },
+  calendar: {
+    slotDuration: string,
+    colours: {
+      frequency: string,
+      done     : string,
+      tick     : string,
+      default  : string,
+    },
+    restTime: {
+        startTime: string,
+        endTime: string,
+        color: string,
+
+        daysOfWeek:any,display:any,
+    }[]
   }
 }
 
 export interface IDate {
-  // TODO date может и не быть (см. main.ts/getPage)
+  // TODO date может и не быть (см. fileManager.ts/getPage)
   date: Date
   timeStart: DURATION_TYPES
   duration: DURATION_TYPES

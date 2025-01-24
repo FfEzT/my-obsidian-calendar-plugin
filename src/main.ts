@@ -149,7 +149,7 @@ export default class MyPlugin extends Plugin {
   private settings: IPluginSettings
 
   private async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData())
     this.addSettingTab(new MySettingTab(this.app, this));
   }
 }

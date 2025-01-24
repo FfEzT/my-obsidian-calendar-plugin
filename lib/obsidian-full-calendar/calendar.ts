@@ -55,6 +55,7 @@ interface ExtraRenderProps {
     ) => Promise<void>;
     toggleTask?: (event: EventApi, isComplete: boolean) => Promise<boolean>;
     forceNarrow?: boolean;
+    slotDuration: string;
 }
 
 export function renderCalendar(
@@ -110,9 +111,8 @@ export function renderCalendar(
         nowIndicator: true,
         scrollTimeReset: false,
         dayMaxEvents: true,
-        // TODO add to const
         expandRows:true,
-        slotDuration: '00:30:00',
+        slotDuration: settings?.slotDuration || "00:30:00",
         // multiMonthMaxColumns: 1,
 
         headerToolbar: !isNarrow

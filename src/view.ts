@@ -1,8 +1,8 @@
 import { ItemView, Platform, WorkspaceLeaf, Notice, Modal, App, Setting, Menu } from 'obsidian';
 import MyPlugin from "./main"
-import { REST_TIME, EVENT_SRC, PLACE_FOR_CREATING_NOTE } from './constants';
+import { PLACE_FOR_CREATING_NOTE, TEXT_DONE } from './constants';
 import { CalendarEvent, IEvent, IPage, MyView } from './types';
-import { pageToEvents, templateIDTick } from './util';
+import { getColourFromPath, IDateToCalendarEvent, templateIDTick, templateNameTick } from './util';
 import { renderCalendar } from 'lib/obsidian-full-calendar/calendar';
 
 export const VIEW_TYPE = "my-obsidian-calendar-plugin"
@@ -40,7 +40,7 @@ export class CalendarView extends ItemView implements MyView {
   }
 
   public addFile(page: IPage): void {
-    const events = pageToEvents(page)
+    const events = this.pageToEvents(page)
     for (let event of events)
       this.calendar.addEvent(event)
   }
@@ -86,13 +86,18 @@ export class CalendarView extends ItemView implements MyView {
 
     for (let page of
               await this.parrentPointer.cache.subscribe(this.idForCache, this.event_src, this)) {
-      events.push(...pageToEvents(page))
+      events.push(...this.pageToEvents(page))
     }
 
     this.calendar = renderCalendar(
-        container as HTMLElement,
+      container as HTMLElement,
+      {
         // @ts-ignore
-        {events: [...REST_TIME, ...events]},
+          events: [
+            ...this.parrentPointer.getSettings().calendar.restTime,
+            ...events
+          ]
+        },
         this.getSettingsCalendar(),
     )
     this.calendar.setOption('weekNumbers', true)
@@ -161,7 +166,8 @@ export class CalendarView extends ItemView implements MyView {
       },
       openContextMenuForEvent: (e: IEvent, mouseEvent: MouseEvent) => {
         this.contextMenuForEvent(e, mouseEvent)
-      }
+      },
+      slotDuration: this.parrentPointer.getSettings().calendar.slotDuration
     }
 
     if (Platform.isMobile) {
@@ -185,6 +191,52 @@ export class CalendarView extends ItemView implements MyView {
 
     menu.showAtMouseEvent(mouseEvent)
   }
+
+  private pageToEvents(page: IPage): IEvent[] {
+    const result: IEvent[] = []
+    
+    const colours = this.parrentPointer.getSettings().calendar.colours
+  
+    const structureTemplate = {
+      id: "",
+      title: "",
+      color: colours.default,
+      borderColor: getColourFromPath(page.file.path),
+      editable: true,
+    }
+  
+    if (page.date) {
+      const structure: IEvent = {
+        ...structureTemplate,
+        id: page.file.path,
+        title: page.file.name,
+        ...IDateToCalendarEvent(page)
+      }
+      if (page.frequency)
+        structure.color = colours.frequency
+      if (page.status == TEXT_DONE)
+          structure.color = colours.done
+  
+      result.push(structure)
+    }
+    for (let tick of page.ticks) {
+      const structure: IEvent = {
+        ...structureTemplate,
+        id: templateIDTick(page.file.path, tick.name),
+        title: templateNameTick(page.file.name, tick.name),
+        color: colours.tick,
+        extendedProps: {
+          tickName: tick.name,
+          notePath: page.file.path
+        },
+        ...IDateToCalendarEvent(tick)
+      }
+      result.push(structure)
+    }
+  
+    return result
+  }
+  
 
 }
 
