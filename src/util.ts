@@ -292,14 +292,14 @@ export async function getProgress(plg: MyPlugin, page: IPage): Promise<ITasks> {
 
 
     const inlinks = meta.file.inlinks.array()
-    if (inlinks.length == 0) {
-      if (page.status) {
-        ++result.all
+    // if (inlinks.length == 0) {
+    if (page.status) {
+      ++result.all
 
-        if (page.status == TEXT_DONE)
-          ++result.done
-      }
+      if (page.status == TEXT_DONE)
+        ++result.done
     }
+    // }
 
     for (let inlink of inlinks ) {
       if (pages.has(inlink.path))
