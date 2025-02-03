@@ -41,6 +41,9 @@ export default class StatusCorrector {
       else if (status == TEXT_SOON && tasks.done != 0) {
         status = TEXT_BLOCKED
       }
+      else if (status != TEXT_IN_PROGRESS && tasks.done == 0 && tasks.all != 0) {
+        status = TEXT_SOON;
+      }
     }
 
     checkDate: {
