@@ -91,6 +91,8 @@ export default class StatusCorrector {
             status = TEXT_CHILD_IN_PROGRESS
           else if (statuses.indexOf(TEXT_CHILD_IN_PROGRESS) != -1)
             status = TEXT_CHILD_IN_PROGRESS
+          else if (statuses.indexOf(TEXT_DONE) != -1)
+            status = TEXT_IN_PROGRESS
           break
         }
         case TEXT_DONE: {
