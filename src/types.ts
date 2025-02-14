@@ -1,5 +1,6 @@
 import { DURATION_TYPES } from "obsidian-dataview"
 
+// TODO interface -> type
 export interface IPluginSettings {
   statusCorrector: {
     isOn: boolean,
