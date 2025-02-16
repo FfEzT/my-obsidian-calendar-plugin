@@ -200,8 +200,8 @@ export class CalendarView extends ItemView implements MyView {
     const structureTemplate = {
       id: "",
       title: "",
-      color: colours.default,
-      borderColor: getColourFromPath(page.file.path),
+      borderColor: colours.default,
+      color: getColourFromPath(page.file.path),
       editable: true,
     }
   
@@ -213,9 +213,9 @@ export class CalendarView extends ItemView implements MyView {
         ...IDateToCalendarEvent(page)
       }
       if (page.frequency)
-        structure.color = colours.frequency
+        structure.borderColor = colours.frequency
       if (page.status == TEXT_DONE)
-          structure.color = colours.done
+          structure.borderColor = colours.done
   
       result.push(structure)
     }
@@ -224,7 +224,7 @@ export class CalendarView extends ItemView implements MyView {
         ...structureTemplate,
         id: templateIDTick(page.file.path, tick.name),
         title: templateNameTick(page.file.name, tick.name),
-        color: colours.tick,
+        borderColor: colours.tick,
         extendedProps: {
           tickName: tick.name,
           notePath: page.file.path
