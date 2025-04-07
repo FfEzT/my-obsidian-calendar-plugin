@@ -340,3 +340,8 @@ export async function getParentNote(page: IPage): Promise<(IPage|undefined)[]> {
 
   return result
 }
+
+export function safeParseInt(str: string): number {
+  const num = Number(str);
+  return Number.isInteger(num) ? num : NaN;
+}

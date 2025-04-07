@@ -7,11 +7,13 @@ import { MySettingTab } from './setting';
 import { DEFAULT_SETTINGS, EVENT_SRC, CACHE_ID, MSG_PLG_NAME } from './constants';
 import StatusCorrector from './statusCorrector';
 import FileManager from './fileManager';
+import { TickChecker } from './TickCheker';
 
 
 export default class MyPlugin extends Plugin {
   // ! IMPORTANT: fileManager is First
   public fileManager: FileManager
+
   public cache: Cache
 
   private statusCorrector: StatusCorrector
@@ -27,6 +29,8 @@ export default class MyPlugin extends Plugin {
     await this.loadSettings()
 
     this.initRegister()
+
+    await new TickChecker(CACHE_ID.TICK_CHECKER, [EVENT_SRC], this)
 
     if (this.settings.statusCorrector.isOn) {
       this.statusCorrector = new StatusCorrector(CACHE_ID.STATUS_CORRECTOR, [EVENT_SRC], this)

@@ -64,7 +64,7 @@ export default class FileManager {
     const tFile = this.app.metadataCache.getFirstLinkpathDest(
       event?.extendedProps?.notePath || event.id, ''
     )
-  
+
     // false = open in the current tab
     const leaf = this.app.workspace.getLeaf(true)
     tFile && leaf.openFile(tFile)
@@ -137,6 +137,19 @@ export default class FileManager {
     }
 
     return result
+  }
+
+  public async getText(path: string): Promise<string> {
+    const tFile = this.app.metadataCache.getFirstLinkpathDest(path, '') as TFile
+    const text = await this.app.vault.read(tFile)
+
+    return text
+  }
+
+  public async setText(path: string, text: string) {
+    const tFile = this.app.metadataCache.getFirstLinkpathDest(path, '') as TFile
+
+    await this.app.vault.modify(tFile, text)
   }
 
   private app: App

@@ -47,7 +47,8 @@ export const DEFAULT_SETTINGS: IPluginSettings = {
 
 export enum CACHE_ID {
   CALENDAR = 1,
-  STATUS_CORRECTOR
+  STATUS_CORRECTOR,
+  TICK_CHECKER
 }
 
 
