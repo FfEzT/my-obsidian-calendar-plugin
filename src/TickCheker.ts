@@ -20,7 +20,6 @@ export class TickChecker {
 
 
   private async process(pages: IPage[]) {
-    console.log(pages)
     for (let page of pages) {
       for (let tick of page.ticks) {
         if ( isNaN(safeParseInt(tick.name)) )
