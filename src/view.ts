@@ -4,12 +4,14 @@ import { PLACE_FOR_CREATING_NOTE, TEXT_DONE } from './constants';
 import { CalendarEvent, IEvent, IPage, MyView } from './types';
 import { getColourFromPath, IDateToCalendarEvent, templateIDTick, templateNameTick } from './util';
 import { renderCalendar } from 'lib/obsidian-full-calendar/calendar';
+import { EventImpl } from '@fullcalendar/core/internal';
+import { Calendar } from '@fullcalendar/core';
 
 export const VIEW_TYPE = "my-obsidian-calendar-plugin"
 
 export class CalendarView extends ItemView implements MyView {
   private parrentPointer: MyPlugin
-  private calendar: any = null
+  private calendar: Calendar | null = null
   private idForCache: number
   private event_src: string[]
 
@@ -42,12 +44,14 @@ export class CalendarView extends ItemView implements MyView {
   public addFile(page: IPage): void {
     const events = this.pageToEvents(page)
     for (let event of events)
-      this.calendar.addEvent(event)
+      this.calendar?.addEvent(event)
   }
 
   public changeFile(newPage: IPage, oldPage: IPage): void {
+    this.calendar?.pauseRendering()
     this.deleteFile(oldPage)
     this.addFile(newPage)
+    this.calendar?.resumeRendering()
   }
 
   public renameFile(newPage: IPage, oldPage: IPage): void {
@@ -106,9 +110,9 @@ export class CalendarView extends ItemView implements MyView {
     window.setTimeout(
       (_: any) => {
         if (Platform.isMobile)
-          this.calendar.changeView('timeGrid3Days')
+          this.calendar?.changeView('timeGrid3Days')
         else
-          this.calendar.changeView('timeGridWeek')
+          this.calendar?.changeView('timeGridWeek')
       }, 1
     )
     this.calendar.render()
@@ -194,9 +198,9 @@ export class CalendarView extends ItemView implements MyView {
 
   private pageToEvents(page: IPage): IEvent[] {
     const result: IEvent[] = []
-    
+
     const colours = this.parrentPointer.getSettings().calendar.colours
-  
+
     const structureTemplate = {
       id: "",
       title: "",
@@ -204,7 +208,7 @@ export class CalendarView extends ItemView implements MyView {
       color: getColourFromPath(page.file.path),
       editable: true,
     }
-  
+
     if (page.date) {
       const structure: IEvent = {
         ...structureTemplate,
@@ -216,7 +220,7 @@ export class CalendarView extends ItemView implements MyView {
         structure.borderColor = colours.frequency
       if (page.status == TEXT_DONE)
           structure.borderColor = colours.done
-  
+
       result.push(structure)
     }
     for (let tick of page.ticks) {
@@ -233,10 +237,10 @@ export class CalendarView extends ItemView implements MyView {
       }
       result.push(structure)
     }
-  
+
     return result
   }
-  
+
 
 }
 
