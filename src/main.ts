@@ -1,6 +1,6 @@
 // import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, ItemView, Platform, WorkspaceLeaf } from 'obsidian';
 import { App, Notice, Plugin, PluginManifest, TFile, WorkspaceLeaf } from 'obsidian';
-import { CalendarView, VIEW_TYPE } from "./view"
+import { CalendarView, VIEW_TYPE } from "./CalendarView"
 import { Cache } from "./cache"
 import { IPluginSettings } from './types';
 import { MySettingTab } from './setting';
@@ -11,7 +11,6 @@ import { TickChecker } from './TickCheker';
 
 
 export default class MyPlugin extends Plugin {
-  // ! IMPORTANT: fileManager is First
   public fileManager: FileManager
 
   public cache: Cache
@@ -21,8 +20,9 @@ export default class MyPlugin extends Plugin {
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest)
 
-    this.fileManager = new FileManager(this)
-    this.cache = new Cache(this)
+    const fileManager = new FileManager(this)
+    this.fileManager = fileManager
+    this.cache = new Cache(this, fileManager)
   }
 
   public async onload() {

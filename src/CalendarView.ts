@@ -1,4 +1,4 @@
-import { ItemView, Platform, WorkspaceLeaf, Notice, Modal, App, Setting, Menu } from 'obsidian';
+import { ItemView, Platform, WorkspaceLeaf, Notice, Modal, App, Setting, Menu, Component } from 'obsidian';
 import MyPlugin from "./main"
 import { PLACE_FOR_CREATING_NOTE, TEXT_DONE } from './constants';
 import { CalendarEvent, IEvent, IPage, MyView } from './types';
@@ -187,11 +187,13 @@ export class CalendarView extends ItemView implements MyView {
 
   private contextMenuForEvent(event: IEvent, mouseEvent: MouseEvent) {
     const menu = new Menu
+
     menu.addItem(
       (item) => item.setTitle(event.id)
         .onClick(async () => this.parrentPointer.fileManager.openNote(event))
     )
     // menu.addSeparator()
+
 
     menu.showAtMouseEvent(mouseEvent)
   }
@@ -240,8 +242,6 @@ export class CalendarView extends ItemView implements MyView {
 
     return result
   }
-
-
 }
 
 class nameModal extends Modal {

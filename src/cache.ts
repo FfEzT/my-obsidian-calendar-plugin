@@ -2,6 +2,7 @@ import MyPlugin from "./main"
 import { TAbstractFile, TFile } from "obsidian"
 import { IPage, ISubscriber } from "./types"
 import { isEqualObj } from "./util"
+import FileManager from "./fileManager"
 
 interface IPathSubscriber {
   paths: string[],
@@ -20,7 +21,9 @@ export class Cache {
   private initSyncResolve: (value: void | PromiseLike<void>) => void
   private isInited = false
 
-  constructor(parrentPointer: MyPlugin) {
+  // TODO fix: fileManager is unused since it can be found in MyPlugin
+  // but first off, init FileManager, then Cache
+  constructor(parrentPointer: MyPlugin, fileManager: FileManager) {
     this.parrentPointer = parrentPointer
 
     this.parrentPointer.app.workspace.onLayoutReady(() => this.initStorage())
