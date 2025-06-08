@@ -119,7 +119,7 @@ export function renderCalendar(
             ? {
                   left: "prev,next today",
                   center: "title",
-                  right: "dayGridMonth,timeGridWeek,listWeek,dayGridYear",
+                  right: "timeGrid5Days,timeGridWeek,listWeek,dayGridMonth,dayGridYear",
               }
             : !isMobile
             ? {
@@ -139,6 +139,11 @@ export function renderCalendar(
                 type: "timeGrid",
                 duration: { days: 3 },
                 buttonText: "3",
+            },
+            timeGrid5Days: {
+                type: "timeGrid",
+                duration: { days: 5 },
+                buttonText: "5"
             },
             dayGridMonth: {
               dayMaxEvents: false,
