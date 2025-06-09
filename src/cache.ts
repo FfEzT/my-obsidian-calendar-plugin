@@ -172,7 +172,7 @@ export class Cache {
     for (let i in tFiles) {
       const tFile = tFiles[i]
 
-      notice.setMessage(`${MSG_PLG_NAME}: added ${tFile.path} (${i}/${tFiles.length})`)
+      notice.setMessage(`${MSG_PLG_NAME}: (${i}/${tFiles.length}) added ${tFile.path}`)
 
       this.storage.set(
         tFile.path,
