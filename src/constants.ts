@@ -1,6 +1,6 @@
 import { IPluginSettings } from "./types"
 
-export const MSG_PLG_NAME = "MyCalendar: "
+export const MSG_PLG_NAME = "MyCalendar"
 
 const daysOfWeek = [ '1','2','3','4','5','6','0' ] // these recurrent events move separately
 const display = 'background'

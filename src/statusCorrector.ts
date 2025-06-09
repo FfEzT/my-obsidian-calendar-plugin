@@ -62,7 +62,7 @@ export default class StatusCorrector {
 
         if (!children?.status)
           continue
-        
+
         statuses.push(children.status)
       }
 
@@ -121,7 +121,7 @@ export default class StatusCorrector {
 
   public async correctAllNotes() {
     const notice = new Notice(
-      MSG_PLG_NAME + "Start checking status of notes",
+      MSG_PLG_NAME + ": Start checking status of notes",
       1000 * 60 // 60 seconds
     )
 
@@ -162,13 +162,13 @@ export default class StatusCorrector {
       )
     }
 
-    notice.setMessage(MSG_PLG_NAME + "Status of Notes has been checked")
+    notice.setMessage(MSG_PLG_NAME + ": Status of Notes has been checked")
     setTimeout(
       () => notice.hide(),
       3000
     )
 
-    new Notice("StatusCorrector: Notes has been checked")
+    new Notice(`${MSG_PLG_NAME}: Notes has been checked`)
   }
 
   public destroy() {
@@ -188,10 +188,10 @@ export default class StatusCorrector {
   public async changeFile(page: IPage, oldPage: IPage) {
     const queuePaths: string[] = []
     const set = new Set<string>()
-  
+
     queuePaths.push(page.file.path)
     set.add(page.file.path)
-  
+
     for (let leftPointer = 0; leftPointer < queuePaths.length; ++leftPointer) {
       const path = queuePaths[leftPointer]
       const page = this.parent.cache.getPage(path) as IPage
@@ -200,7 +200,7 @@ export default class StatusCorrector {
       const isChanged = await this.correctNote(page)
       if (!isChanged && page.status == oldPage.status)
         continue
-      
+
       new Notice(
         `${page.file.name} - change status: ${oldStatus} => ${page.status}`
       )

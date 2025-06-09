@@ -1,8 +1,9 @@
 import MyPlugin from "./main"
-import { TAbstractFile, TFile } from "obsidian"
+import { Notice, TAbstractFile, TFile } from "obsidian"
 import { IPage, ISubscriber } from "./types"
 import { isEqualObj } from "./util"
 import FileManager from "./fileManager"
+import { MSG_PLG_NAME } from "./constants"
 
 interface IPathSubscriber {
   paths: string[],
@@ -162,12 +163,26 @@ export class Cache {
 
   private async initStorage() {
     const tFiles = this.parrentPointer.app.vault.getMarkdownFiles()
-    for (let tFile of tFiles) {
+
+    const notice = new Notice(
+      `${MSG_PLG_NAME}: there are ${tFiles.length} notes`,
+      1000 * 60 // 60 seconds
+    )
+
+    for (let i in tFiles) {
+      const tFile = tFiles[i]
+
+      notice.setMessage(`${MSG_PLG_NAME}: added ${tFile.path} (${i}/${tFiles.length})`)
+
       this.storage.set(
         tFile.path,
         await this.parrentPointer.fileManager.getPage(tFile)
       )
+
     }
+
+    notice.hide()
+    new Notice(`${MSG_PLG_NAME}: cache has been inited`)
 
     this.initSyncResolve()
     this.isInited = true
