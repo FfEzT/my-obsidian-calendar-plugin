@@ -1,10 +1,9 @@
 import { ItemView, Platform, WorkspaceLeaf, Notice, Modal, App, Setting, Menu, Component } from 'obsidian';
 import MyPlugin from "./main"
-import { PLACE_FOR_CREATING_NOTE, TEXT_DONE } from './constants';
+import { MSG_PLG_NAME, PLACE_FOR_CREATING_NOTE, TEXT_DONE } from './constants';
 import { CalendarEvent, IEvent, IPage, MyView } from './types';
-import { getColourFromPath, IDateToCalendarEvent, templateIDTick, templateNameTick } from './util';
+import { getColourFromPath, IDateToCalendarEvent, templateIDTick, templateNameTick, timeAdd } from './util';
 import { renderCalendar } from 'lib/obsidian-full-calendar/calendar';
-import { EventImpl } from '@fullcalendar/core/internal';
 import { Calendar } from '@fullcalendar/core';
 
 export const VIEW_TYPE = "my-obsidian-calendar-plugin"
@@ -125,21 +124,36 @@ export class CalendarView extends ItemView implements MyView {
       timeFormat24h: true,
 
       eventClick: (arg: any) => {
-          const {event, jsEvent} = arg
-          this.parrentPointer.fileManager.openNote(event)
+        const {event, jsEvent} = arg
+        this.parrentPointer.fileManager.openNote(event)
       },
+
       modifyEvent: async (newPos: any, oldPos: any) => {
         const props = newPos.extendedProps
+
+        const page = this.parrentPointer.cache.getPage(newPos.id)
         const event: CalendarEvent = {
           start: newPos.start,
           end: newPos.end,
           allDay: newPos.allDay
         }
 
-        if (props.notePath)
+        if (!page) {
+          console.warn(`${MSG_PLG_NAME}: can't find page by Event. eventID: ${newPos.id}`)
+          return false
+        }
+
+        if (props.notePath) {
           this.parrentPointer.fileManager.changeTickFile(props.notePath, props.tickName, event)
-        else
+        }
+        else {
+          if (page.duration && oldPos.allDay && !newPos.allDay) {
+            event.end = timeAdd(newPos.start, page.duration)
+            newPos.setEnd(event.end)
+          }
+
           this.parrentPointer.fileManager.changePropertyFile(newPos.id, event)
+        }
 
         // true for update place in Calendar
         return true

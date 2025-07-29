@@ -1,6 +1,7 @@
 import { IPage, ITick, IDate, CalendarEvent, ITasks } from "./types";
 import { DataviewApi } from "obsidian-dataview/lib/api/plugin-api"
 import { getAPI } from "obsidian-dataview"
+import { DURATION_TYPES } from "obsidian-dataview"
 
 import {
   TEXT_DONE,
@@ -344,4 +345,13 @@ export async function getParentNote(page: IPage): Promise<(IPage|undefined)[]> {
 export function safeParseInt(str: string): number {
   const num = Number(str);
   return Number.isInteger(num) ? num : NaN;
+}
+
+export function timeAdd(start: Date, duration: DURATION_TYPES): Date {
+  const dur = duration.as("minutes")
+
+  const result = new Date(start)
+  result.setMinutes(result.getMinutes() + dur)
+
+  return result
 }

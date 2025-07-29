@@ -23,8 +23,16 @@ export default class FileManager {
           const property_ = CalendarEventToIDate(event)
 
           property['date']      = property_['date'].toISOString().slice(0,-14)
-          property['timeStart'] = property_['timeStart']
-          property['duration']  = property_['duration']
+
+          if (property['timeStart'] && property['duration']
+            && !property_['timeStart'] && !property_['duration']) {
+            property['timeStart'] = property_['timeStart']
+            // property['duration']  = property_['duration']
+          }
+          else {
+            property['timeStart'] = property_['timeStart']
+            property['duration']  = property_['duration']
+          }
       }
     )
   }
