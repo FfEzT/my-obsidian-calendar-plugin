@@ -98,11 +98,7 @@ export default class FileManager {
         ...property
         }
 
-        const duration = dv.duration(property.duration)
-        // NOTE если убрать это, то не будет случай с FORMAT_DEFAULT_ADD
-        if (duration)
-          page.duration = duration
-
+        page.duration = dv.duration(property.duration)
         page.timeStart = dv.duration(property.timeStart)
         page.date = dv.date(property.date)
 

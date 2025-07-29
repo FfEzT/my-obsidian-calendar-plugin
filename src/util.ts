@@ -4,10 +4,8 @@ import { getAPI } from "obsidian-dataview"
 
 import {
   TEXT_DONE,
-  FORMAT_DEFAULT_ADD,
   DEFAULT_ADD,
   MillisecsInHour,
-  DEFAULT_ADD_IN_MILLISEC,
   MillisecsInDay,
   MillisecsInMinute,
   FORMAT_DAY,
@@ -39,18 +37,7 @@ export function IDateToCalendarEvent(args: IDate): CalendarEvent {
     structure.start.setMinutes(args.timeStart?.values?.minutes || 0)
 
     let tmpTime = new Date(structure.start)
-    if (args.duration === FORMAT_DEFAULT_ADD) {
-        tmpTime.setMinutes(
-            tmpTime.getMinutes() + DEFAULT_ADD.m
-        )
-        tmpTime.setHours(
-            tmpTime.getHours() + DEFAULT_ADD.h
-        )
-        tmpTime.setDate(
-            tmpTime.getDate() + DEFAULT_ADD.d
-        )
-    }
-    else if (args.duration?.values?.minutes || args.duration?.values?.hours || args.duration?.values?.days) {
+    if (args.duration?.values?.minutes || args.duration?.values?.hours || args.duration?.values?.days) {
       const duration = args.duration.values
 
       tmpTime.setMinutes(
@@ -112,9 +99,7 @@ export function CalendarEventToIDate(event: CalendarEvent): IDate {
   else
     result['timeStart'] = start.getHours() + 'h' + start.getMinutes() + 'm'
 
-  result['duration'] = DEFAULT_ADD_IN_MILLISEC === srcMillisec
-  ? FORMAT_DEFAULT_ADD
-  : millisecToString(srcMillisec)
+  result['duration'] = millisecToString(srcMillisec)
 
   return result
 }
