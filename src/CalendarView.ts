@@ -138,15 +138,14 @@ export class CalendarView extends ItemView implements MyView {
           allDay: newPos.allDay
         }
 
-        if (!page) {
-          console.warn(`${MSG_PLG_NAME}: can't find page by Event. eventID: ${newPos.id}`)
-          return false
-        }
-
         if (props.notePath) {
           this.parrentPointer.fileManager.changeTickFile(props.notePath, props.tickName, event)
         }
         else {
+          if (!page) {
+            console.warn(`${MSG_PLG_NAME}: can't find page by Event. eventID: ${newPos.id}`)
+            return false
+          }
           if (page.duration && oldPos.allDay && !newPos.allDay) {
             event.end = timeAdd(newPos.start, page.duration)
             newPos.setEnd(event.end)
