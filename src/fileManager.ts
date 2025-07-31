@@ -1,6 +1,6 @@
 import { App, Notice, TFile } from "obsidian";
 import MyPlugin from "./main";
-import { CalendarEvent, IEvent, IPage, ITasks } from "./types";
+import { IEvent, IPage, ITasks, IDate } from "./types";
 import { CalendarEventToIDate, dv, getTicksFromText } from "./util";
 import { MSG_PLG_NAME } from "./constants";
 
@@ -14,25 +14,15 @@ export default class FileManager {
     new Notice(MSG_PLG_NAME + "created " + path)
   }
 
-  public async changePropertyFile(path: string, event: CalendarEvent) {
+  public async changePropertyFile(path: string, event: IDate) {
     // NOTE это отправит сигнал cache
     const tFile = this.app.metadataCache.getFirstLinkpathDest(path, '') as TFile
     await this.app.fileManager.processFrontMatter(
       tFile,
       property => {
-          const property_ = CalendarEventToIDate(event)
-
-          property['date']      = property_['date'].toISOString().slice(0,-14)
-
-          if (property['timeStart'] && property['duration']
-            && !property_['timeStart'] && !property_['duration']) {
-            property['timeStart'] = property_['timeStart']
-            // property['duration']  = property_['duration']
-          }
-          else {
-            property['timeStart'] = property_['timeStart']
-            property['duration']  = property_['duration']
-          }
+        property['date']      = event['date'].toISOString().slice(0,-14)
+        property['timeStart'] = event['timeStart']
+        property['duration']  = event['duration']
       }
     )
   }
@@ -48,18 +38,16 @@ export default class FileManager {
     )
   }
 
-  public async changeTickFile(path: string, tickname:string, event: CalendarEvent) {
+  public async changeTickFile(path: string, tickname:string, event: IDate) {
     // NOTE это отправит сигнал cache
     const tFile = this.app.metadataCache.getFirstLinkpathDest(path, '') as TFile
 
     // ! мб, поменять с использованием другой либы (см. плагин другой с видоса YouTube)
     const text = await this.app.vault.read(tFile)
-    const property = CalendarEventToIDate(event)
-    const date = property["date"].toISOString().slice(0,-14)
-
     const regExp = new RegExp(`\\[t::\\s*${tickname}(,[^\\]]*|)\\]`, "gm")
 
-    const newString = `[t::${tickname},${date},${property["timeStart"]},${property['duration']}]`
+    const date = event["date"].toISOString().slice(0,-14)
+    const newString = `[t::${tickname},${date},${event["timeStart"]},${event['duration']}]`
 
     await this.app.vault.modify(
       tFile,

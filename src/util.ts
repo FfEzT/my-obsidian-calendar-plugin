@@ -135,7 +135,7 @@ export function getTicksFromText(text: string): ITick[] {
   return result
 }
 
-function millisecToString(millisec:number): string {
+export function millisecToString(millisec:number): string {
   const days = Math.floor(
       millisec / (MillisecsInDay)
   )

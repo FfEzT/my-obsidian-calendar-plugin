@@ -2,7 +2,7 @@ import { ItemView, Platform, WorkspaceLeaf, Notice, Modal, App, Setting, Menu, C
 import MyPlugin from "./main"
 import { MSG_PLG_NAME, PLACE_FOR_CREATING_NOTE, TEXT_DONE } from './constants';
 import { CalendarEvent, IEvent, IPage, MyView } from './types';
-import { getColourFromPath, IDateToCalendarEvent, templateIDTick, templateNameTick, timeAdd } from './util';
+import { CalendarEventToIDate, getColourFromPath, IDateToCalendarEvent, millisecToString, templateIDTick, templateNameTick, timeAdd } from './util';
 import { renderCalendar } from 'lib/obsidian-full-calendar/calendar';
 import { Calendar } from '@fullcalendar/core';
 
@@ -131,27 +131,70 @@ export class CalendarView extends ItemView implements MyView {
       modifyEvent: async (newPos: any, oldPos: any) => {
         const props = newPos.extendedProps
 
-        const page = this.parrentPointer.cache.getPage(newPos.id)
         const event: CalendarEvent = {
           start: newPos.start,
           end: newPos.end,
           allDay: newPos.allDay
         }
 
+        // TODO can refactor this with:
+        // const noteName = props.notePath || newPos.id
+        // const page = ...getPage(noteName)
         if (props.notePath) {
-          this.parrentPointer.fileManager.changeTickFile(props.notePath, props.tickName, event)
+          const page = this.parrentPointer.cache.getPage(props.notePath)
+
+          if (!page) {
+            console.warn(`${MSG_PLG_NAME}: can't find page by Event. eventID: ${props.notePath}`)
+            return false
+          }
+
+          const tick = page.ticks.find(
+            el => el.name == props.tickName
+          )
+          if (!tick) {
+            console.warn(`${MSG_PLG_NAME}: can't find tick by page. Page - tickName: ${props.notePath} - ${props.tickName}`)
+            return false
+          }
+
+          if (tick.duration && oldPos.allDay && !newPos.allDay) {
+            event.end = timeAdd(newPos.start, tick.duration)
+            newPos.setEnd(event.end)
+          }
+
+          const newProp = CalendarEventToIDate(event)
+          if (tick['timeStart'] && tick['duration']
+            && !newProp['timeStart'] && !newProp['duration'])
+          {
+            newProp['duration'] = millisecToString(
+              tick.duration.as("milliseconds")
+            )
+          }
+
+          this.parrentPointer.fileManager.changeTickFile(props.notePath, props.tickName, newProp)
         }
         else {
+          const page = this.parrentPointer.cache.getPage(newPos.id)
+
           if (!page) {
             console.warn(`${MSG_PLG_NAME}: can't find page by Event. eventID: ${newPos.id}`)
             return false
           }
+
           if (page.duration && oldPos.allDay && !newPos.allDay) {
             event.end = timeAdd(newPos.start, page.duration)
             newPos.setEnd(event.end)
           }
 
-          this.parrentPointer.fileManager.changePropertyFile(newPos.id, event)
+          const newProp = CalendarEventToIDate(event)
+          if (page['timeStart'] && page['duration']
+            && !newProp['timeStart'] && !newProp['duration'])
+          {
+            newProp['duration'] = millisecToString(
+              page.duration.as("milliseconds")
+            )
+          }
+
+          this.parrentPointer.fileManager.changePropertyFile(newPos.id, newProp)
         }
 
         // true for update place in Calendar
@@ -170,7 +213,10 @@ export class CalendarView extends ItemView implements MyView {
 
               // TODO подумать, как убрать TimeOut
               setTimeout(
-                () => this.parrentPointer.fileManager.changePropertyFile(pathOfFile, {start, end, allDay}),
+                () => this.parrentPointer.fileManager.changePropertyFile(
+                  pathOfFile,
+                  CalendarEventToIDate({start, end, allDay})
+                ),
                 1500
               )
             }
