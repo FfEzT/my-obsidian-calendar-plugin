@@ -186,7 +186,7 @@ export class CalendarView extends ItemView implements MyView {
           const newProp = CalendarEventToIDate(event)
           if (newPos.allDay) {
             newProp['duration'] = millisecToString(
-              page.duration.as("milliseconds")
+              page.duration?.as("milliseconds")
             )
           }
 
