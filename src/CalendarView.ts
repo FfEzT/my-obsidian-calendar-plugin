@@ -273,7 +273,7 @@ export class CalendarView extends ItemView implements MyView {
         title: page.file.name,
         ...IDateToCalendarEvent(page)
       }
-      if (page.frequency)
+      if (page.ff_frequency)
         structure.borderColor = colours.frequency
       if (page.status == TEXT_DONE)
           structure.borderColor = colours.done
