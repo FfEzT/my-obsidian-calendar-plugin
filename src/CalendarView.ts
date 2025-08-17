@@ -156,15 +156,15 @@ export class CalendarView extends ItemView implements MyView {
             return false
           }
 
-          if (tick.duration && oldPos.allDay && !newPos.allDay) {
-            event.end = timeAdd(newPos.start, tick.duration)
+          if (tick.ff_duration && oldPos.allDay && !newPos.allDay) {
+            event.end = timeAdd(newPos.start, tick.ff_duration)
             newPos.setEnd(event.end)
           }
 
           const newProp = CalendarEventToIDate(event)
           if (newPos.allDay) {
-            newProp['duration'] = millisecToString(
-              tick.duration.as("milliseconds")
+            newProp['ff_duration'] = millisecToString(
+              tick.ff_duration?.as("milliseconds")
             )
           }
 
@@ -178,15 +178,15 @@ export class CalendarView extends ItemView implements MyView {
             return false
           }
 
-          if (page.duration && oldPos.allDay && !newPos.allDay) {
-            event.end = timeAdd(newPos.start, page.duration)
+          if (page.ff_duration && oldPos.allDay && !newPos.allDay) {
+            event.end = timeAdd(newPos.start, page.ff_duration)
             newPos.setEnd(event.end)
           }
 
           const newProp = CalendarEventToIDate(event)
           if (newPos.allDay) {
-            newProp['duration'] = millisecToString(
-              page.duration?.as("milliseconds")
+            newProp['ff_duration'] = millisecToString(
+              page.ff_duration?.as("milliseconds")
             )
           }
 
@@ -266,7 +266,7 @@ export class CalendarView extends ItemView implements MyView {
       editable: true,
     }
 
-    if (page.date) {
+    if (page.ff_date) {
       const structure: IEvent = {
         ...structureTemplate,
         id: page.file.path,
@@ -275,7 +275,7 @@ export class CalendarView extends ItemView implements MyView {
       }
       if (page.ff_frequency)
         structure.borderColor = colours.frequency
-      if (page.status == TEXT_DONE)
+      if (page.ff_status == TEXT_DONE)
           structure.borderColor = colours.done
 
       result.push(structure)

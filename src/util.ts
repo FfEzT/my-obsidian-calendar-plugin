@@ -5,7 +5,6 @@ import { DURATION_TYPES } from "obsidian-dataview"
 
 import {
   TEXT_DONE,
-  DEFAULT_ADD,
   MillisecsInHour,
   MillisecsInDay,
   MillisecsInMinute,
@@ -29,17 +28,17 @@ function pathToFileWithoutFileName(path: string) {
 
 export function IDateToCalendarEvent(args: IDate): CalendarEvent {
   const structure: CalendarEvent = {
-    start: new Date(args.date),
+    start: new Date(args.ff_date),
     allDay: false,
   }
 
-  if (args.duration) {
-    structure.start.setHours  (args.timeStart?.values?.hours   || 0)
-    structure.start.setMinutes(args.timeStart?.values?.minutes || 0)
+  if (args.ff_duration) {
+    structure.start.setHours  (args.ff_timeStart?.values?.hours   || 0)
+    structure.start.setMinutes(args.ff_timeStart?.values?.minutes || 0)
 
     let tmpTime = new Date(structure.start)
-    if (args.duration?.values?.minutes || args.duration?.values?.hours || args.duration?.values?.days) {
-      const duration = args.duration.values
+    if (args.ff_duration?.values?.minutes || args.ff_duration?.values?.hours || args.ff_duration?.values?.days) {
+      const duration = args.ff_duration.values
 
       tmpTime.setMinutes(
         tmpTime.getMinutes() + (duration.minutes || 0)
@@ -55,12 +54,12 @@ export function IDateToCalendarEvent(args: IDate): CalendarEvent {
       structure.allDay = true
     }
 
-    if (!args.timeStart?.values)
+    if (!args.ff_timeStart?.values)
       structure.allDay = true
 
     structure.end = tmpTime
   }
-  else if (args.duration) {
+  else if (args.ff_duration) {
     structure.allDay = true
   }
   else structure.allDay = true
@@ -77,9 +76,9 @@ export function CalendarEventToIDate(event: CalendarEvent): IDate {
   )
 
   const result: IDate = {
-    duration: "",
-    timeStart: "",
-    date: new Date(start)
+    ff_duration: "",
+    ff_timeStart: "",
+    ff_date: new Date(start)
   }
 
   // ! тут убираю гринвич для get'еров внизу
@@ -93,14 +92,14 @@ export function CalendarEventToIDate(event: CalendarEvent): IDate {
   : MillisecsInHour
 
   if (allDay) {
-    result['timeStart'] = ""
+    result['ff_timeStart'] = ""
     if (srcMillisec <= MillisecsInDay)
       srcMillisec = 0
   }
   else
-    result['timeStart'] = start.getHours() + 'h' + start.getMinutes() + 'm'
+    result['ff_timeStart'] = start.getHours() + 'h' + start.getMinutes() + 'm'
 
-  result['duration'] = millisecToString(srcMillisec)
+  result['ff_duration'] = millisecToString(srcMillisec)
 
   return result
 }
@@ -116,11 +115,11 @@ export function getTicksFromText(text: string): ITick[] {
       continue
 
     const name = args[0]?.trim()
-    const date = dv.date(args[1]?.trim())
-    const timeStart = dv.duration(args[2]?.trim())
+    const ff_date = dv.date(args[1]?.trim())
+    const ff_timeStart = dv.duration(args[2]?.trim())
 
     const tempDuration = args[3]?.trim()
-    const duration = tempDuration == 'x'
+    const ff_duration = tempDuration == 'x'
     ? 'x'
     : dv.duration(args[3]?.trim())
 
@@ -128,7 +127,7 @@ export function getTicksFromText(text: string): ITick[] {
       continue
 
     result.push(
-      {name, date, timeStart, duration}
+      {name, ff_date, ff_timeStart, ff_duration}
     )
 
   }
@@ -153,11 +152,11 @@ export function millisecToString(millisec:number): string {
 
   let resString = ''
   if (days)
-      resString += days.toString() + FORMAT_DAY
+    resString += days.toString() + FORMAT_DAY
   if (hours)
-      resString += hours.toString() + FORMAT_HOUR
+    resString += hours.toString() + FORMAT_HOUR
   if (minutes)
-      resString += minutes.toString() + FORMAT_MINUTE
+    resString += minutes.toString() + FORMAT_MINUTE
 
   return resString
 }
@@ -248,7 +247,7 @@ export async function getNotesWithoutParent(src: string): Promise<IPage[]> {
   await waitDvInit()
 
   const child = dv.pages(`"${src}"`).where(
-    (page: any) => !page.parent
+    (page: any) => !page.ff_parent
   ).array()
 
   return child as IPage[]
@@ -279,10 +278,10 @@ export async function getProgress(plg: MyPlugin, page: IPage): Promise<ITasks> {
 
     const inlinks = meta.file.inlinks.array()
     // if (inlinks.length == 0) {
-    if (page.status) {
+    if (page.ff_status) {
       ++result.all
 
-      if (page.status == TEXT_DONE)
+      if (page.ff_status == TEXT_DONE)
         ++result.done
     }
     // }

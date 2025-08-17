@@ -65,11 +65,6 @@ export const PLACE_FOR_CREATING_NOTE = "databases"
 export const FORMAT_DAY = 'd'
 export const FORMAT_HOUR = 'h'
 export const FORMAT_MINUTE = 'm'
-export const DEFAULT_ADD = {
-  d: 0,
-  h: 1,
-  m: 30
-}
 
 export const BACKGROUND_COLOUR = {
     hue: {

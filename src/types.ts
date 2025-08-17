@@ -26,9 +26,9 @@ export interface IPluginSettings {
 
 export interface IDate {
   // TODO date может и не быть (см. fileManager.ts/getPage)
-  date: Date
-  timeStart: DURATION_TYPES
-  duration: DURATION_TYPES
+  ff_date: Date
+  ff_timeStart: DURATION_TYPES
+  ff_duration: DURATION_TYPES
 }
 
 export interface ITick extends IDate {
@@ -41,8 +41,8 @@ export interface IPage extends IDate {
     name: string
   },
   ticks: ITick[]
-  frequency?: string
-  status?: string
+  ff_frequency?: string
+  ff_status?: string
 }
 
 export interface IEvent {

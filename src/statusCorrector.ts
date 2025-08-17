@@ -29,7 +29,7 @@ export default class StatusCorrector {
   }
 
   private async correctNote(page: IPage): Promise<boolean> {
-    let status = page.status
+    let status = page.ff_status
     if (!status)
       return false
 
@@ -48,7 +48,7 @@ export default class StatusCorrector {
 
     checkDate: {
       const checks = [TEXT_SOON, TEXT_BLOCKED, TEXT_CHILD_IN_PROGRESS]
-      if (page.date && checks.indexOf(status as string) != -1) {
+      if (page.ff_date && checks.indexOf(status as string) != -1) {
         status = TEXT_IN_PROGRESS
       }
     }
@@ -60,10 +60,10 @@ export default class StatusCorrector {
       for (let children_ of child_) {
         const children = (this.parent.cache.getPage(children_) as IPage)
 
-        if (!children?.status)
+        if (!children?.ff_status)
           continue
 
-        statuses.push(children.status)
+        statuses.push(children.ff_status)
       }
 
       switch (status) {
@@ -110,10 +110,10 @@ export default class StatusCorrector {
         // case TEXT_BLOCKED: break
       }
     }
-    if (status == page.status)
+    if (status == page.ff_status)
       return false
 
-    page.status = status
+    page.ff_status = status
     await this.parent.fileManager.changeStatusFile(page.file.path, status)
 
     return true
@@ -195,14 +195,14 @@ export default class StatusCorrector {
     for (let leftPointer = 0; leftPointer < queuePaths.length; ++leftPointer) {
       const path = queuePaths[leftPointer]
       const page = this.parent.cache.getPage(path) as IPage
-      const oldStatus = page.status
+      const oldStatus = page.ff_status
 
       const isChanged = await this.correctNote(page)
-      if (!isChanged && page.status == oldPage.status)
+      if (!isChanged && page.ff_status == oldPage.ff_status)
         continue
 
       new Notice(
-        `${page.file.name} - change status: ${oldStatus} => ${page.status}`
+        `${page.file.name} - change status: ${oldStatus} => ${page.ff_status}`
       )
 
       const child = await getParentNote(page)

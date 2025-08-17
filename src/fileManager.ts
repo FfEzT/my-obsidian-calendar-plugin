@@ -20,9 +20,9 @@ export default class FileManager {
     await this.app.fileManager.processFrontMatter(
       tFile,
       property => {
-        property['date']      = event['date'].toISOString().slice(0,-14)
-        property['timeStart'] = event['timeStart']
-        property['duration']  = event['duration']
+        property['ff_date']      = event['ff_date'].toISOString().slice(0,-14)
+        property['ff_timeStart'] = event['ff_timeStart']
+        property['ff_duration']  = event['ff_duration']
       }
     )
   }
@@ -33,7 +33,7 @@ export default class FileManager {
     await this.app.fileManager.processFrontMatter(
       tFile,
       property => {
-          property['status'] = status
+          property['ff_status'] = status
       }
     )
   }
@@ -46,8 +46,8 @@ export default class FileManager {
     const text = await this.app.vault.read(tFile)
     const regExp = new RegExp(`\\[t::\\s*${tickname}(,[^\\]]*|)\\]`, "gm")
 
-    const date = event["date"].toISOString().slice(0,-14)
-    const newString = `[t::${tickname},${date},${event["timeStart"]},${event['duration']}]`
+    const date = event["ff_date"].toISOString().slice(0,-14)
+    const newString = `[t::${tickname},${date},${event["ff_timeStart"]},${event['ff_duration']}]`
 
     await this.app.vault.modify(
       tFile,
@@ -72,9 +72,9 @@ export default class FileManager {
         path: "",
         name: ""
       },
-      date: new Date,
-      timeStart: null,
-      duration: null,
+      ff_date: new Date,
+      ff_timeStart: null,
+      ff_duration: null,
       ticks: []
     }
 
@@ -86,17 +86,17 @@ export default class FileManager {
       file,
       property => {
         const page = {
-        file: {
-          path: file.path,
-          name: file.basename
-        },
-        ticks,
-        ...property
+          file: {
+            path: file.path,
+            name: file.basename
+          },
+          ticks,
+          ...property
         }
 
-        page.duration = dv.duration(property.duration)
-        page.timeStart = dv.duration(property.timeStart)
-        page.date = dv.date(property.date)
+        page.ff_duration = dv.duration(property.ff_duration)
+        page.ff_timeStart = dv.duration(property.ff_timeStart)
+        page.ff_date = dv.date(property.ff_date)
 
         result = page
       }
