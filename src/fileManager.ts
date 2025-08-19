@@ -33,7 +33,7 @@ export default class FileManager {
     await this.app.fileManager.processFrontMatter(
       tFile,
       property => {
-          property['ff_status'] = status
+        property['ff_status'] = status
       }
     )
   }
@@ -67,42 +67,34 @@ export default class FileManager {
   }
 
   public async getPage(file: TFile): Promise<IPage> {
-    let result: IPage = {
+    const result: IPage = {
       file: {
-        path: "",
-        name: ""
+        path: file.path,
+        name: file.basename
       },
+      ticks: getTicksFromText(await this.app.vault.cachedRead(file)),
+      ff_duration: "",
+      ff_timeStart: "",
       ff_date: new Date,
-      ff_timeStart: null,
-      ff_duration: null,
-      ticks: []
     }
 
-    // const tFile = app.vault.getFileByPath(file.path) as TFile
-    const ticks = getTicksFromText(await this.app.vault.cachedRead(file))
+    const property = this.app.metadataCache.getFileCache(file)?.frontmatter
+    if (!property) {
+      // bad way, cause it may haven't expected fields
+      return result
+      // TODO throw Error("unreachable")
+    }
 
-    // TODO эту надо оптимизировать
-    await this.app.fileManager.processFrontMatter(
-      file,
-      property => {
-        const page = {
-          file: {
-            path: file.path,
-            name: file.basename
-          },
-          ticks,
-          ...property
-        }
+    const added = {
+      ff_duration: dv.duration(property.ff_duration),
+      ff_timeStart: dv.duration(property.ff_timeStart),
+      ff_date: dv.date(property.ff_date),
+    }
 
-        page.ff_duration = dv.duration(property.ff_duration)
-        page.ff_timeStart = dv.duration(property.ff_timeStart)
-        page.ff_date = dv.date(property.ff_date)
-
-        result = page
-      }
-    )
-
-    return result
+    return {
+      ...result,
+      ...added
+    }
   }
 
   public getTaskCount(page: IPage): ITasks {
