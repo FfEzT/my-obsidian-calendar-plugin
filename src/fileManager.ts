@@ -75,20 +75,24 @@ export default class FileManager {
       ticks: getTicksFromText(await this.app.vault.cachedRead(file)),
       ff_duration: "",
       ff_timeStart: "",
-      ff_date: new Date,
+
+      // TODO из-за того, что не все заметки имеют ff_date, он должен возвращать null, но это bad practice
+      //@ts-ignore
+      ff_date: null,
     }
 
     const property = this.app.metadataCache.getFileCache(file)?.frontmatter
     if (!property) {
       // bad way, cause it may haven't expected fields
-      return result
       // TODO throw Error("unreachable")
+      return result
     }
 
     const added = {
       ff_duration: dv.duration(property.ff_duration),
       ff_timeStart: dv.duration(property.ff_timeStart),
       ff_date: dv.date(property.ff_date),
+      ff_status: property.ff_status
     }
 
     return {
