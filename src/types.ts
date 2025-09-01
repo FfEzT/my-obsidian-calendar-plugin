@@ -1,24 +1,29 @@
 import { DURATION_TYPES } from "obsidian-dataview"
 
 export class Src {
-  constructor(path:string) {}
-
-  public addExcludes(excludes: string[]) {
-    // TODO перед добавлением проверять, что exclude внутри path
+  constructor(path:string) {
+    this._path = path
   }
 
-  private path: string
+  public addExcludes(excludes: string[]): boolean {
+    // TODO перед добавлением проверять, что exclude внутри path
+    return true
+  }
 
-  private excludes: string[]
+  private _path: string
+
+  get path() {
+    return this._path
+  }
+
+  private _excludes: string[]
+
+  get excludes(): string[] {
+    return structuredClone(this._excludes)
+  }
 }
 
-// TODO interface -> type
-export type IPluginSettings = {
-  statusCorrector: {
-    isOn: boolean,
-    startOnStartUp: boolean
-  },
-  calendar: {
+export type CalendarSettings = {
     slotDuration: string,
     colours: {
       frequency: string,
@@ -31,9 +36,17 @@ export type IPluginSettings = {
         endTime: string,
         color: string,
 
+        // TODO remove any
         daysOfWeek:any,display:any,
     }[]
+  }
+
+export type PluginSettings = {
+  statusCorrector: {
+    isOn: boolean,
+    startOnStartUp: boolean
   },
+  calendar: CalendarSettings,
   source: {
     noteSources: Src[],
 
@@ -85,20 +98,22 @@ export interface CalendarEvent {
 }
 
 // INFO это интерфейс для Cache
+// TODO переписать типы
 export interface MyView {
-  addFile(_:IPage): void
-  changeFile(newPage: IPage, oldPage: IPage): void
-  renameFile(newPage: IPage, oldPage: IPage): void
-  deleteFile(_: IPage): void
   reset(): void
+  addFile(_:IPage): void
+  deleteFile(_: IPage): void
+  changeFile(newPage: Src, oldPage: Src): void
+  renameFile(newPage: Src, oldPage: Src): void
 }
 
+// TODO вроде это повторяет
 export interface ISubscriber {
-  renameFile(newPage: IPage, oldPage: IPage): void
-  deleteFile(page: IPage): void
-  addFile(page: IPage): void
-  changeFile(newPage: IPage, oldPage: IPage): void
   reset(): void
+  addFile(page: IPage): void
+  deleteFile(page: IPage): void
+  changeFile(newPage: IPage, oldPage: IPage): void
+  renameFile(newPage: IPage, oldPage: IPage): void
 }
 
 export interface ITasks {

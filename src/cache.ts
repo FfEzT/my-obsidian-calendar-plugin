@@ -27,8 +27,6 @@ export class Cache {
   private initSyncResolve: (value: void | PromiseLike<void>) => void
   private isInited = false
 
-  // TODO fix: fileManager is unused since it can be found in MyPlugin
-  // but first off, init FileManager, then Cache
   constructor(parrentPointer: MyPlugin, fileManager: FileManager) {
     this.parrentPointer = parrentPointer
 
@@ -56,13 +54,25 @@ export class Cache {
     if (!this.isInited)
       await this.initSync
 
-    const result = []
-    for (let [key, value] of this.storage) {
-      for (let path of paths) {
-        if (key.startsWith(path))
-          result.push(value)
+    const result: SubscribeData[] = []
+
+    // Для каждого запрошенного пути создаем объект SubscribeData
+    for (let path of paths) {
+      const pages: IPage[] = []
+
+      // Находим все страницы, которые начинаются с этого пути
+      for (let [key, value] of this.storage) {
+        if (key.startsWith(path.path)) {
+          pages.push(value)
+        }
       }
+
+      result.push({
+        src: path,
+        pages: pages
+      })
     }
+
     return result
   }
 
@@ -82,17 +92,16 @@ export class Cache {
     page.file.path = file.path
     page.file.name = file.basename
 
-
     this.storage.delete(oldPath)
     this.storage.set(file.path, page)
 
     for (let [_, {paths, subscriber}] of this.subscribers) {
       for (let path of paths) {
-        if (file.path.startsWith(path) && oldPath.startsWith(path))
+        if (file.path.startsWith(path.path) && oldPath.startsWith(path.path))
           subscriber.renameFile(page, oldPage)
-        else if (oldPath.startsWith(path))
+        else if (oldPath.startsWith(path.path))
           subscriber.deleteFile(oldPage)
-        else if (file.path.startsWith(path))
+        else if (file.path.startsWith(path.path))
           subscriber.addFile(page)
       }
     }
@@ -107,7 +116,7 @@ export class Cache {
 
     for (let [_, {paths, subscriber}] of this.subscribers) {
       for (let path of paths) {
-        if (!file.path.startsWith(path))
+        if (!file.path.startsWith(path.path))
           continue
 
         subscriber.addFile(page)
@@ -128,7 +137,7 @@ export class Cache {
 
     for (let [_, {paths, subscriber}] of this.subscribers) {
       for (let path of paths) {
-        if (!file.path.startsWith(path))
+        if (!file.path.startsWith(path.path))
           continue
 
         subscriber.changeFile(page, oldPage)
@@ -145,7 +154,7 @@ export class Cache {
     this.storage.delete(file.path)
     for (let [_, {paths, subscriber}] of this.subscribers) {
       for (let path of paths) {
-        if (!file.path.startsWith(path))
+        if (!file.path.startsWith(path.path))
           continue
 
         subscriber.deleteFile(page)
@@ -183,7 +192,6 @@ export class Cache {
         tFile.path,
         await this.parrentPointer.fileManager.getPage(tFile)
       )
-
     }
 
     notice.hide()

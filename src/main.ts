@@ -1,10 +1,10 @@
 // import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, ItemView, Platform, WorkspaceLeaf } from 'obsidian';
 import { App, Notice, Plugin, PluginManifest, TFile, WorkspaceLeaf } from 'obsidian';
-import { CalendarView, VIEW_TYPE } from "./views/CalendarView"
+import { CalendarView} from "./views/CalendarView"
 import { Cache } from "./cache"
-import { IPluginSettings } from './types';
+import { PluginSettings } from './types';
 import { MySettingTab } from './setting';
-import { DEFAULT_SETTINGS, CACHE_ID, MSG_PLG_NAME } from './constants';
+import { DEFAULT_SETTINGS, CACHE_ID, MSG_PLG_NAME, VIEW_TYPE } from './constants';
 import StatusCorrector from './views/statusCorrector';
 import FileManager from './fileManager';
 import { TickChecker } from './views/TickCheker';
@@ -17,7 +17,7 @@ export default class MyPlugin extends Plugin {
 
   private statusCorrector: StatusCorrector
 
-  private settings: IPluginSettings
+  private settings: PluginSettings
 
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest)
@@ -36,24 +36,30 @@ export default class MyPlugin extends Plugin {
 
     await new TickChecker(CACHE_ID.TICK_CHECKER, this.settings.source.noteSources, this)
 
-    if (this.settings.statusCorrector.isOn) {
-      this.statusCorrector = new StatusCorrector(CACHE_ID.STATUS_CORRECTOR, this.settings.source.noteSources, this)
+    // if (this.settings.statusCorrector.isOn) {
+    //   this.statusCorrector = new StatusCorrector(CACHE_ID.STATUS_CORRECTOR, this.settings.source.noteSources, this)
 
-      if (this.settings.statusCorrector.startOnStartUp)
-        this.statusCorrector.correctAllNotes()
+    //   if (this.settings.statusCorrector.startOnStartUp)
+    //     this.statusCorrector.correctAllNotes()
 
-      this.addCommand({
-        id: 'fullStatusCorrect',
-        name: MSG_PLG_NAME + 'Full StatusCorrector',
-        callback: () => {
-          this.statusCorrector.correctAllNotes()
-        }
-      });
-    }
+    //   this.addCommand({
+    //     id: 'fullStatusCorrect',
+    //     name: MSG_PLG_NAME + 'Full StatusCorrector',
+    //     callback: () => {
+    //       this.statusCorrector.correctAllNotes()
+    //     }
+    //   });
+    // }
 
     this.registerView(
         VIEW_TYPE,
-        (leaf: WorkspaceLeaf) => new CalendarView(leaf, CACHE_ID.CALENDAR, this.settings.source.noteSources, this)
+        (leaf: WorkspaceLeaf) => new CalendarView(
+          leaf,
+          CACHE_ID.CALENDAR,
+          this.settings.source.noteSources,
+          this,
+          this.settings.source.defaultCreatePath
+        )
     )
 
     this.addRibbonIcon("info", MSG_PLG_NAME + "Open Calendar", () => this.activateView())
@@ -141,14 +147,14 @@ export default class MyPlugin extends Plugin {
 
   // Settings
 
-  public getSettings(): IPluginSettings {
+  public getSettings(): PluginSettings {
     // NOTE: full copy
     return JSON.parse(
       JSON.stringify(this.settings)
     )
   }
 
-  public async saveSettings(settings: IPluginSettings) {
+  public async saveSettings(settings: PluginSettings) {
     this.settings = settings
     await this.saveData(this.settings);
   }
