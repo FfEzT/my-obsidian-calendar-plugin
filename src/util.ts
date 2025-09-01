@@ -1,4 +1,4 @@
-import { IPage, ITick, IDate, CalendarEvent, ITasks } from "./types";
+import { IPage, ITick, IDate, CalendarEvent, ITasks, IEvent } from "./types";
 import { DataviewApi } from "obsidian-dataview/lib/api/plugin-api"
 import { getAPI } from "obsidian-dataview"
 import { DURATION_TYPES } from "obsidian-dataview"
@@ -336,6 +336,51 @@ export function timeAdd(start: Date, duration: DURATION_TYPES): Date {
 
   const result = new Date(start)
   result.setMinutes(result.getMinutes() + dur)
+
+  return result
+}
+
+export function pageToEvents(page: IPage): IEvent[] {
+  const result: IEvent[] = []
+
+  const colours = this.calendarSettings.colours
+
+  const structureTemplate = {
+    id: "",
+    title: "",
+    borderColor: colours.default,
+    color: getColourFromPath(page.file.path),
+    editable: true,
+  }
+
+  if (page.ff_date) {
+    const structure: IEvent = {
+      ...structureTemplate,
+      id: page.file.path,
+      title: page.file.name,
+      ...IDateToCalendarEvent(page)
+    }
+    if (page.ff_frequency)
+      structure.borderColor = colours.frequency
+    if (page.ff_status == TEXT_DONE)
+        structure.borderColor = colours.done
+
+    result.push(structure)
+  }
+  for (let tick of page.ticks) {
+    const structure: IEvent = {
+      ...structureTemplate,
+      id: templateIDTick(page.file.path, tick.name),
+      title: templateNameTick(page.file.name, tick.name),
+      borderColor: colours.tick,
+      extendedProps: {
+        tickName: tick.name,
+        notePath: page.file.path
+      },
+      ...IDateToCalendarEvent(tick)
+    }
+    result.push(structure)
+  }
 
   return result
 }

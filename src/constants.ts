@@ -1,13 +1,16 @@
-import { IPluginSettings } from "./types"
+import { PluginSettings, Src } from "./types"
 
 export const MSG_PLG_NAME = "MyCalendar"
+
+const EVENT_SRC = "databases"
+const PLACE_FOR_CREATING_NOTE = "databases"
 
 const daysOfWeek = [ '1','2','3','4','5','6','0' ] // these recurrent events move separately
 const display = 'background'
 export const COLOUR_REST  = '#305B60'
 export const COLOUR_SLEEP = '#cc0000'
 
-export const DEFAULT_SETTINGS: IPluginSettings = {
+export const DEFAULT_SETTINGS: PluginSettings = {
   statusCorrector: {
     isOn: true,
     startOnStartUp: true
@@ -42,7 +45,14 @@ export const DEFAULT_SETTINGS: IPluginSettings = {
           color: COLOUR_REST,
       }
     ]
+  },
+  source: {
+    noteSources: [new Src(EVENT_SRC)],
+
+    // NOTE default path where note will be created
+    defaultCreatePath: PLACE_FOR_CREATING_NOTE
   }
+
 }
 
 export enum CACHE_ID {
@@ -51,6 +61,8 @@ export enum CACHE_ID {
   TICK_CHECKER
 }
 
+export const VIEW_TYPE = "my-obsidian-calendar-plugin"
+
 
 // TODO переделать в TEXT = {DONE...BLOCKED}
 export const TEXT_DONE = "🟢done"
@@ -58,9 +70,6 @@ export const TEXT_IN_PROGRESS = "🔵in progress"
 export const TEXT_SOON = "🟣soon"
 export const TEXT_CHILD_IN_PROGRESS = "🟡🟦child in progress"
 export const TEXT_BLOCKED = "🟡blocked"
-
-export const EVENT_SRC = "databases"
-export const PLACE_FOR_CREATING_NOTE = "databases"
 
 export const FORMAT_DAY = 'd'
 export const FORMAT_HOUR = 'h'

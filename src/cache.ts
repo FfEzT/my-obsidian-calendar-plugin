@@ -1,13 +1,18 @@
 import MyPlugin from "./main"
 import { Notice, TAbstractFile, TFile } from "obsidian"
-import { IPage, ISubscriber } from "./types"
+import { IPage, ISubscriber, Src } from "./types"
 import { isEqualObj } from "./util"
 import FileManager from "./fileManager"
 import { MSG_PLG_NAME } from "./constants"
 
-interface IPathSubscriber {
-  paths: string[],
+type IPathSubscriber = {
+  paths: Src[],
   subscriber: ISubscriber
+}
+
+type SubscribeData = {
+  src: Src,
+  pages: IPage[]
 }
 
 export class Cache {
@@ -39,7 +44,7 @@ export class Cache {
     console.log("subscribers", this.subscribers)
   }
 
-  public async subscribe(id: Number, paths: Array<string>, subscriber: ISubscriber): Promise<IPage[]> {
+  public async subscribe(id: Number, paths: Src[], subscriber: ISubscriber): Promise<SubscribeData[]> {
     this.subscribers.set(
       id,
       {

@@ -6,6 +6,7 @@ import { MSG_PLG_NAME } from "./constants";
 
 export default class FileManager {
   constructor(plg: MyPlugin) {
+    // TODO передавать не весь app, а только нужные ему поля
     this.app = plg.app
   }
 

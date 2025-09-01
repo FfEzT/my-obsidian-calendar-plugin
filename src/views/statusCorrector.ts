@@ -1,13 +1,12 @@
 import { Notice } from "obsidian"
-import { TEXT_BLOCKED, TEXT_DONE, TEXT_SOON, EVENT_SRC, TEXT_IN_PROGRESS, TEXT_CHILD_IN_PROGRESS, MSG_PLG_NAME } from "./constants"
-import MyPlugin from "./main"
-import { IPage } from "./types"
-import { getNotesWithoutParent, getParentNote, getChildNotePaths, getProgress } from "./util"
+import { TEXT_BLOCKED, TEXT_DONE, TEXT_SOON, TEXT_IN_PROGRESS, TEXT_CHILD_IN_PROGRESS, MSG_PLG_NAME } from "../constants"
+import MyPlugin from "../main"
+import { IPage, MyView, Src } from "../types"
+import { getNotesWithoutParent, getParentNote, getChildNotePaths, getProgress } from "../util"
 
-export default class StatusCorrector {
+export default class StatusCorrector implements MyView {
   private parent: MyPlugin
   private idForCache: number
-  private event_src: string[]
 
   private subscribed = false
   private whileSubscribing = new Promise(
@@ -15,12 +14,11 @@ export default class StatusCorrector {
   )
   private resolveSubscribing: (value: void | PromiseLike<void>) => void
 
-  constructor(idForCache: number, event_src: string[], parrentPointer: MyPlugin) {
+  constructor(idForCache: number, event_src: Src[], parrentPointer: MyPlugin) {
     this.parent = parrentPointer
     this.idForCache = idForCache
-    this.event_src = event_src
 
-    this.parent.cache.subscribe(this.idForCache, this.event_src, this).then(
+    this.parent.cache.subscribe(this.idForCache, event_src, this).then(
       () => {
         this.subscribed = true
         this.resolveSubscribing()

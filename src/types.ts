@@ -1,7 +1,19 @@
 import { DURATION_TYPES } from "obsidian-dataview"
 
+export class Src {
+  constructor(path:string) {}
+
+  public addExcludes(excludes: string[]) {
+    // TODO перед добавлением проверять, что exclude внутри path
+  }
+
+  private path: string
+
+  private excludes: string[]
+}
+
 // TODO interface -> type
-export interface IPluginSettings {
+export type IPluginSettings = {
   statusCorrector: {
     isOn: boolean,
     startOnStartUp: boolean
@@ -21,6 +33,12 @@ export interface IPluginSettings {
 
         daysOfWeek:any,display:any,
     }[]
+  },
+  source: {
+    noteSources: Src[],
+
+    // NOTE default path where note will be created
+    defaultCreatePath: string
   }
 }
 

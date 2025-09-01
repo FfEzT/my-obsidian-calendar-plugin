@@ -1,16 +1,16 @@
 import { App, Notice } from "obsidian";
-import MyPlugin from "./main";
-import { IPage } from "./types"
-import { MSG_PLG_NAME } from "./constants";
-import { safeParseInt } from "./util";
+import MyPlugin from "../main";
+import { IPage, MyView, Src } from "../types"
+import { MSG_PLG_NAME } from "../constants";
+import { safeParseInt } from "../util";
 
-export class TickChecker {
+export class TickChecker implements MyView {
   private parent: MyPlugin
 
   private idForCache: number
 
 
-  constructor(idForCache: number, event_src: string[], ptr: MyPlugin) {
+  constructor(idForCache: number, event_src: Src[], ptr: MyPlugin) {
     this.parent = ptr
     this.idForCache = idForCache
 

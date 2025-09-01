@@ -1,13 +1,13 @@
 // import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, ItemView, Platform, WorkspaceLeaf } from 'obsidian';
 import { App, Notice, Plugin, PluginManifest, TFile, WorkspaceLeaf } from 'obsidian';
-import { CalendarView, VIEW_TYPE } from "./CalendarView"
+import { CalendarView, VIEW_TYPE } from "./views/CalendarView"
 import { Cache } from "./cache"
 import { IPluginSettings } from './types';
 import { MySettingTab } from './setting';
-import { DEFAULT_SETTINGS, EVENT_SRC, CACHE_ID, MSG_PLG_NAME } from './constants';
-import StatusCorrector from './statusCorrector';
+import { DEFAULT_SETTINGS, CACHE_ID, MSG_PLG_NAME } from './constants';
+import StatusCorrector from './views/statusCorrector';
 import FileManager from './fileManager';
-import { TickChecker } from './TickCheker';
+import { TickChecker } from './views/TickCheker';
 
 
 export default class MyPlugin extends Plugin {
@@ -17,11 +17,15 @@ export default class MyPlugin extends Plugin {
 
   private statusCorrector: StatusCorrector
 
+  private settings: IPluginSettings
+
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest)
 
     const fileManager = new FileManager(this)
     this.fileManager = fileManager
+
+    // создавать при onload и тогда же запускать initStorage
     this.cache = new Cache(this, fileManager)
   }
 
@@ -30,10 +34,10 @@ export default class MyPlugin extends Plugin {
 
     this.initRegister()
 
-    await new TickChecker(CACHE_ID.TICK_CHECKER, [EVENT_SRC], this)
+    await new TickChecker(CACHE_ID.TICK_CHECKER, this.settings.source.noteSources, this)
 
     if (this.settings.statusCorrector.isOn) {
-      this.statusCorrector = new StatusCorrector(CACHE_ID.STATUS_CORRECTOR, [EVENT_SRC], this)
+      this.statusCorrector = new StatusCorrector(CACHE_ID.STATUS_CORRECTOR, this.settings.source.noteSources, this)
 
       if (this.settings.statusCorrector.startOnStartUp)
         this.statusCorrector.correctAllNotes()
@@ -49,7 +53,7 @@ export default class MyPlugin extends Plugin {
 
     this.registerView(
         VIEW_TYPE,
-        (leaf: WorkspaceLeaf) => new CalendarView(leaf, CACHE_ID.CALENDAR, [EVENT_SRC], this) // TODO EVENT_SRC брать из настроек
+        (leaf: WorkspaceLeaf) => new CalendarView(leaf, CACHE_ID.CALENDAR, this.settings.source.noteSources, this)
     )
 
     this.addRibbonIcon("info", MSG_PLG_NAME + "Open Calendar", () => this.activateView())
@@ -150,10 +154,10 @@ export default class MyPlugin extends Plugin {
   }
 
 
-  private settings: IPluginSettings
 
   private async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData())
+
     this.addSettingTab(new MySettingTab(this.app, this));
   }
 }

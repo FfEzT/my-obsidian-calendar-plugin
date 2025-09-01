@@ -1,39 +1,78 @@
 import { ItemView, Platform, WorkspaceLeaf, Notice, Modal, App, Setting, Menu, Component } from 'obsidian';
-import MyPlugin from "./main"
-import { MSG_PLG_NAME, PLACE_FOR_CREATING_NOTE, TEXT_DONE } from './constants';
-import { CalendarEvent, IEvent, IPage, MyView } from './types';
-import { CalendarEventToIDate, getColourFromPath, IDateToCalendarEvent, millisecToString, templateIDTick, templateNameTick, timeAdd } from './util';
+import MyPlugin from "../main"
+import { MSG_PLG_NAME, TEXT_DONE, VIEW_TYPE } from '../constants';
+import { CalendarEvent, CalendarSettings, IEvent, IPage, MyView, Src } from '../types';
+import { CalendarEventToIDate, getColourFromPath, IDateToCalendarEvent, millisecToString, pageToEvents, templateIDTick, templateNameTick, timeAdd } from '../util';
 import { renderCalendar } from 'lib/obsidian-full-calendar/calendar';
 import { Calendar } from '@fullcalendar/core';
-
-export const VIEW_TYPE = "my-obsidian-calendar-plugin"
+import { Cache } from 'src/cache';
+import FileManager from 'src/fileManager';
 
 export class CalendarView extends ItemView implements MyView {
-  private parrentPointer: MyPlugin
-  private calendar: Calendar | null = null
-  private idForCache: number
-  private event_src: string[]
+  // private parrentPointer: MyPlugin
 
-  constructor(leaf: WorkspaceLeaf, idForCache: number, event_src: string[], parrentPointer: MyPlugin) {
+  private cache: Cache
+
+  private calendar: Calendar | null = null
+
+  private idForCache: number
+
+  private event_src: Src[]
+
+  private localStorage: Map<string, IPage[]>
+
+  private selectedSrcPaths: Set<string> = new Set()
+
+  private fileManager: FileManager
+
+  private calendarSettings: CalendarSettings
+
+  // private srcCheckboxContainer: HTMLElement | null = null
+  private placeForCreatingNote: string
+
+  constructor(
+    leaf: WorkspaceLeaf,
+    cache: Cache,
+    idForCache: number,
+    event_src: Src[],
+    calendarSettings: CalendarSettings,
+    fileManager: FileManager,
+    placeForCreatingNote: string,
+    // parrentPointer: MyPlugin,
+    // backGroundEvents:
+  ) {
     super(leaf)
-    this.parrentPointer = parrentPointer
+
+    this.cache = cache
     this.idForCache = idForCache
     this.event_src = event_src
+    this.fileManager = fileManager
+    this.calendarSettings = calendarSettings
+    this.placeForCreatingNote = placeForCreatingNote
+
+    for (let src of event_src) {
+      this.selectedSrcPaths.add(src.path)
+    }
   }
 
   public getViewType() {return VIEW_TYPE}
 
   public getDisplayText() {return "Calendar"}
 
-  // #1
   public async onOpen() {
     if (Platform.isMobile)
       this.containerEl.style.height = "95vh"
 
-    const container = this.containerEl.children[1]
+    const container = this.containerEl.children[1] // TODO что за дети (что в других индексах?)
     container.empty()
 
+    // Создаем контейнер для чекбоксов
+    // this.srcCheckboxContainer = container.createDiv({cls: 'calendar-src-checkboxes'})
+
     this.render(container)
+    // .then(
+      // () => this.renderSrcCheckboxes()
+    // )
   }
 
   public onResize() {
@@ -41,7 +80,12 @@ export class CalendarView extends ItemView implements MyView {
   }
 
   public addFile(page: IPage): void {
-    const events = this.pageToEvents(page)
+    // Проверяем, соответствует ли путь страницы выбранным источникам
+    if (!this.isPageInSelectedSrc(page.file.path)) {
+      return
+    }
+
+    const events = pageToEvents(page)
     for (let event of events)
       this.calendar?.addEvent(event)
   }
@@ -84,23 +128,97 @@ export class CalendarView extends ItemView implements MyView {
     this.parrentPointer.cache.unsubscribe(this.idForCache)
   }
 
-  private async render(container: Element) {
-    const events: IEvent[] = []
+  private renderSrcCheckboxes() {
+    if (!this.srcCheckboxContainer) return
 
-    for (let page of
-              await this.parrentPointer.cache.subscribe(this.idForCache, this.event_src, this)) {
-      events.push(...this.pageToEvents(page))
+    this.srcCheckboxContainer.empty()
+
+    this.event_src.forEach(src => {
+      const checkboxContainer = this.srcCheckboxContainer!.createDiv({cls: 'src-checkbox-item'})
+
+      const checkbox = checkboxContainer.createEl('input', {
+        type: 'checkbox',
+        attr: {
+          id: `src-checkbox-${src.path}`,
+          checked: this.selectedSrcPaths.has(src.path) ? 'checked' : null
+        }
+      })
+
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) {
+          this.selectedSrcPaths.add(src.path)
+        } else {
+          this.selectedSrcPaths.delete(src.path)
+        }
+        this.refreshCalendar()
+      })
+
+      checkboxContainer.createEl('label', {
+        text: src.path,
+        attr: {for: `src-checkbox-${src.path}`}
+      })
+    })
+  }
+
+  private isPageInSelectedSrc(pagePath: string): boolean {
+    // Проверяем, находится ли страница в любом из выбранных путей
+    for (const srcPath of this.selectedSrcPaths) {
+      if (pagePath.startsWith(srcPath)) {
+        return true
+      }
+    }
+    return false
+  }
+
+  private async refreshCalendar() {
+    if (!this.calendar) return
+
+    // Удаляем все события
+    this.calendar.getEvents().forEach(event => event.remove())
+
+    // Добавляем события только из выбранных источников
+    const subscribeData = await this.cache.subscribe(this.idForCache, this.event_src, this)
+
+    const events: IEvent[] = []
+    for (const data of subscribeData) {
+      // Проверяем, выбран ли этот источник
+      if (this.selectedSrcPaths.has(data.src.path)) {
+        for (let page of data.pages) {
+          events.push(...pageToEvents(page))
+        }
+      }
+    }
+
+    events.forEach(event => this.calendar?.addEvent(event))
+  }
+
+  private async render(container: Element)  {
+    this.localStorage = new Map
+
+    const subscribedData = await this.cache.subscribe(this.idForCache, this.event_src, this)
+    for (let data of subscribedData) {
+      this.localStorage.set(data.src.path, data.pages)
+    }
+
+    const events: IEvent[] = []
+    for (const data of subscribedData) {
+      if (!this.selectedSrcPaths.has(data.src.path))
+        continue
+
+      for (let page of data.pages) {
+        events.push( ...pageToEvents(page) )
+      }
     }
 
     this.calendar = renderCalendar(
       container as HTMLElement,
       {
-        // @ts-ignore
-          events: [
-            ...this.parrentPointer.getSettings().calendar.restTime,
-            ...events
-          ]
-        },
+        //@ts-ignore // TODO remove
+        events: [
+          ...this.calendarSettings.restTime,
+          ...events
+        ]
+      },// as EventSource,
         this.getSettingsCalendar(),
     )
     this.calendar.setOption('weekNumbers', true)
@@ -123,11 +241,13 @@ export class CalendarView extends ItemView implements MyView {
       weekNumbers: true,
       timeFormat24h: true,
 
+      // TODO remove any
       eventClick: (arg: any) => {
         const {event, jsEvent} = arg
-        this.parrentPointer.fileManager.openNote(event)
+        this.fileManager.openNote(event)
       },
 
+      // TODO remove any
       modifyEvent: async (newPos: any, oldPos: any) => {
         const props = newPos.extendedProps
 
@@ -137,11 +257,8 @@ export class CalendarView extends ItemView implements MyView {
           allDay: newPos.allDay
         }
 
-        // TODO can refactor this with:
-        // const noteName = props.notePath || newPos.id
-        // const page = ...getPage(noteName)
         if (props.notePath) {
-          const page = this.parrentPointer.cache.getPage(props.notePath)
+          const page = this.cache.getPage(props.notePath)
 
           if (!page) {
             console.warn(`${MSG_PLG_NAME}: can't find page by Event. eventID: ${props.notePath}`)
@@ -168,10 +285,10 @@ export class CalendarView extends ItemView implements MyView {
             )
           }
 
-          this.parrentPointer.fileManager.changeTickFile(props.notePath, props.tickName, newProp)
+          this.fileManager.changeTickFile(props.notePath, props.tickName, newProp)
         }
         else {
-          const page = this.parrentPointer.cache.getPage(newPos.id)
+          const page = this.cache.getPage(newPos.id)
 
           if (!page) {
             console.warn(`${MSG_PLG_NAME}: can't find page by Event. eventID: ${newPos.id}`)
@@ -190,10 +307,9 @@ export class CalendarView extends ItemView implements MyView {
             )
           }
 
-          this.parrentPointer.fileManager.changePropertyFile(newPos.id, newProp)
+          this.fileManager.changePropertyFile(newPos.id, newProp)
         }
 
-        // true for update place in Calendar
         return true
       },
       select: (start: Date, end: Date, allDay: boolean, __viewMode: any) => {
@@ -204,12 +320,11 @@ export class CalendarView extends ItemView implements MyView {
               if (!nameOfFile)
                 throw 1
 
-              const pathOfFile = PLACE_FOR_CREATING_NOTE + `/${nameOfFile}.md`
-              await this.parrentPointer.fileManager.createFile(pathOfFile)
+              const pathOfFile = this.placeForCreatingNote + `/${nameOfFile}.md`
+              await this.fileManager.createFile(pathOfFile)
 
-              // TODO подумать, как убрать TimeOut
               setTimeout(
-                () => this.parrentPointer.fileManager.changePropertyFile(
+                () => this.fileManager.changePropertyFile(
                   pathOfFile,
                   CalendarEventToIDate({start, end, allDay})
                 ),
@@ -226,7 +341,7 @@ export class CalendarView extends ItemView implements MyView {
       openContextMenuForEvent: (e: IEvent, mouseEvent: MouseEvent) => {
         this.contextMenuForEvent(e, mouseEvent)
       },
-      slotDuration: this.parrentPointer.getSettings().calendar.slotDuration
+      slotDuration: this.calendarSettings.slotDuration
     }
 
     if (Platform.isMobile) {
@@ -245,57 +360,10 @@ export class CalendarView extends ItemView implements MyView {
 
     menu.addItem(
       (item) => item.setTitle(event.id)
-        .onClick(async () => this.parrentPointer.fileManager.openNote(event))
+        .onClick(async () => this.fileManager.openNote(event))
     )
-    // menu.addSeparator()
-
 
     menu.showAtMouseEvent(mouseEvent)
-  }
-
-  private pageToEvents(page: IPage): IEvent[] {
-    const result: IEvent[] = []
-
-    const colours = this.parrentPointer.getSettings().calendar.colours
-
-    const structureTemplate = {
-      id: "",
-      title: "",
-      borderColor: colours.default,
-      color: getColourFromPath(page.file.path),
-      editable: true,
-    }
-
-    if (page.ff_date) {
-      const structure: IEvent = {
-        ...structureTemplate,
-        id: page.file.path,
-        title: page.file.name,
-        ...IDateToCalendarEvent(page)
-      }
-      if (page.ff_frequency)
-        structure.borderColor = colours.frequency
-      if (page.ff_status == TEXT_DONE)
-          structure.borderColor = colours.done
-
-      result.push(structure)
-    }
-    for (let tick of page.ticks) {
-      const structure: IEvent = {
-        ...structureTemplate,
-        id: templateIDTick(page.file.path, tick.name),
-        title: templateNameTick(page.file.name, tick.name),
-        borderColor: colours.tick,
-        extendedProps: {
-          tickName: tick.name,
-          notePath: page.file.path
-        },
-        ...IDateToCalendarEvent(tick)
-      }
-      result.push(structure)
-    }
-
-    return result
   }
 }
 
