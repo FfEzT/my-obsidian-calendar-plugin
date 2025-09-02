@@ -1277,3 +1277,22 @@ a.fc-event:hover {
 .fc .fc-list-event.fc-event-forced-url:hover a {
   text-decoration: underline;
 }
+
+.calendar-src-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px;
+  background-color: var(--background-secondary);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.src-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.src-checkbox-item input[type="checkbox"] {
+  margin: 0;
+}

@@ -105,7 +105,7 @@ export function renderCalendar(
             rrulePlugin,
         ],
         googleCalendarApiKey: "AIzaSyDIiklFwJXaLWuT_4y6I9ZRVVsPuf4xGrk",
-        initialView: 
+        initialView:
             settings?.initialView?.[isNarrow ? "mobile" : "desktop"] ||
             (isNarrow ? "timeGrid3Days" : "timeGridWeek"),
         nowIndicator: true,

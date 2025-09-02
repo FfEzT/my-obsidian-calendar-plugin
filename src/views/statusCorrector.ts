@@ -1,10 +1,10 @@
 import { Notice } from "obsidian"
 import { TEXT_BLOCKED, TEXT_DONE, TEXT_SOON, TEXT_IN_PROGRESS, TEXT_CHILD_IN_PROGRESS, MSG_PLG_NAME } from "../constants"
 import MyPlugin from "../main"
-import { IPage, MyView, Src } from "../types"
+import { IPage, ISubscriber, Src } from "../types"
 import { getNotesWithoutParent, getParentNote, getChildNotePaths, getProgress } from "../util"
 
-export default class StatusCorrector implements MyView {
+export default class StatusCorrector implements ISubscriber {
   private parent: MyPlugin
   private idForCache: number
 
