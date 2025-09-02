@@ -6,27 +6,36 @@ import { PluginSettings } from './types';
 import { MySettingTab } from './setting';
 import { DEFAULT_SETTINGS, CACHE_ID, MSG_PLG_NAME, VIEW_TYPE } from './constants';
 import StatusCorrector from './views/statusCorrector';
-import FileManager from './fileManager';
 import { TickChecker } from './views/TickCheker';
+import NoteManager from './NoteManager';
 
 
 export default class MyPlugin extends Plugin {
-  public fileManager: FileManager
+  private noteManager: NoteManager
 
-  public cache: Cache
+  private cache: Cache
 
   private statusCorrector: StatusCorrector
 
   private settings: PluginSettings
 
+  private tickChecker: TickChecker | void
+
+  private calendar: CalendarView | void
+
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest)
 
-    const fileManager = new FileManager(this)
-    this.fileManager = fileManager
+    const noteManager = new NoteManager(
+      this.app.vault,
+      this.app.metadataCache,
+      this.app.fileManager,
+      this.app.workspace
+    )
+    this.noteManager = noteManager
 
     // создавать при onload и тогда же запускать initStorage
-    this.cache = new Cache(this, fileManager)
+    this.cache = new Cache(this.noteManager, this.app.vault)
   }
 
   public async onload() {
@@ -34,32 +43,51 @@ export default class MyPlugin extends Plugin {
 
     this.initRegister()
 
-    await new TickChecker(CACHE_ID.TICK_CHECKER, this.settings.source.noteSources, this)
 
-    // if (this.settings.statusCorrector.isOn) {
-    //   this.statusCorrector = new StatusCorrector(CACHE_ID.STATUS_CORRECTOR, this.settings.source.noteSources, this)
+    this.tickChecker = new TickChecker(
+      CACHE_ID.TICK_CHECKER,
+      this.settings.source.noteSources,
+      this.cache,
+      this.noteManager
+    )
 
-    //   if (this.settings.statusCorrector.startOnStartUp)
-    //     this.statusCorrector.correctAllNotes()
+    if (this.settings.statusCorrector.isOn) {
+      this.statusCorrector = new StatusCorrector(
+        CACHE_ID.STATUS_CORRECTOR,
+        this.settings.source.noteSources,
+        this.cache,
+        this.noteManager
+      )
 
-    //   this.addCommand({
-    //     id: 'fullStatusCorrect',
-    //     name: MSG_PLG_NAME + 'Full StatusCorrector',
-    //     callback: () => {
-    //       this.statusCorrector.correctAllNotes()
-    //     }
-    //   });
-    // }
+      if (this.settings.statusCorrector.startOnStartUp)
+        this.statusCorrector.correctAllNotes()
+
+      this.addCommand({
+        id: 'fullStatusCorrect',
+        name: MSG_PLG_NAME + 'Full StatusCorrector',
+        callback: () => {
+          this.statusCorrector.correctAllNotes()
+        }
+      });
+    }
+
+    this.app.workspace.onLayoutReady(() => this.init())
 
     this.registerView(
         VIEW_TYPE,
-        (leaf: WorkspaceLeaf) => new CalendarView(
-          leaf,
-          CACHE_ID.CALENDAR,
-          this.settings.source.noteSources,
-          this,
-          this.settings.source.defaultCreatePath
-        )
+        (leaf: WorkspaceLeaf) => {
+          this.calendar = new CalendarView(
+            leaf,
+            CACHE_ID.CALENDAR,
+            this.settings.source.noteSources,
+            this.settings.calendar,
+            this.cache,
+            this.noteManager,
+            this.settings.source.defaultCreatePath
+          )
+
+          return this.calendar
+        }
     )
 
     this.addRibbonIcon("info", MSG_PLG_NAME + "Open Calendar", () => this.activateView())
@@ -82,8 +110,16 @@ export default class MyPlugin extends Plugin {
 
   public onunload() {
     // TODO как будто других не хватает destoy
-    if (this.settings.statusCorrector.isOn)
-      this.statusCorrector.destroy()
+
+    // if (this.settings?.statusCorrector.isOn)
+      this.statusCorrector?.destroy()
+  }
+
+  private async init() {
+    await this.cache.init()
+
+    this.tickChecker?.init()
+    this.statusCorrector?.init()
   }
 
   private initRegister() {

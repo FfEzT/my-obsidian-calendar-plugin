@@ -14,6 +14,8 @@ import {
   BACKGROUND_COLOUR,
 } from "./constants"
 import MyPlugin from "./main";
+import { Cache } from "./cache";
+import NoteManager from "./NoteManager";
 
 const SLEEP_TIME = 1000 // ms
 
@@ -253,10 +255,8 @@ export async function getNotesWithoutParent(src: string): Promise<IPage[]> {
   return child as IPage[]
 }
 
-export async function getProgress(plg: MyPlugin, page: IPage): Promise<ITasks> {
+export async function getProgress(cache: Cache, noteManager: NoteManager, page: IPage): Promise<ITasks> {
   const result = {done:0, all:0}
-  const cache = plg.cache
-  const fileManager = plg.fileManager
 
   await waitDvInit()
 
@@ -270,7 +270,7 @@ export async function getProgress(plg: MyPlugin, page: IPage): Promise<ITasks> {
     if (!page || !meta)
       continue
 
-    const tasks = fileManager.getTaskCount(page)
+    const tasks = noteManager.getTaskCount(page)
 
     result.all  +=  tasks.all
     result.done  +=  tasks.done
@@ -340,47 +340,3 @@ export function timeAdd(start: Date, duration: DURATION_TYPES): Date {
   return result
 }
 
-export function pageToEvents(page: IPage): IEvent[] {
-  const result: IEvent[] = []
-
-  const colours = this.calendarSettings.colours
-
-  const structureTemplate = {
-    id: "",
-    title: "",
-    borderColor: colours.default,
-    color: getColourFromPath(page.file.path),
-    editable: true,
-  }
-
-  if (page.ff_date) {
-    const structure: IEvent = {
-      ...structureTemplate,
-      id: page.file.path,
-      title: page.file.name,
-      ...IDateToCalendarEvent(page)
-    }
-    if (page.ff_frequency)
-      structure.borderColor = colours.frequency
-    if (page.ff_status == TEXT_DONE)
-      structure.borderColor = colours.done
-
-    result.push(structure)
-  }
-  for (let tick of page.ticks) {
-    const structure: IEvent = {
-      ...structureTemplate,
-      id: templateIDTick(page.file.path, tick.name),
-      title: templateNameTick(page.file.name, tick.name),
-      borderColor: colours.tick,
-      extendedProps: {
-        tickName: tick.name,
-        notePath: page.file.path
-      },
-      ...IDateToCalendarEvent(tick)
-    }
-    result.push(structure)
-  }
-
-  return result
-}

@@ -3,42 +3,57 @@ import MyPlugin from "../main";
 import { IPage, ISubscriber, Src } from "../types"
 import { MSG_PLG_NAME } from "../constants";
 import { safeParseInt } from "../util";
+import { Cache } from "src/cache";
+import NoteManager from "src/NoteManager";
 
 export class TickChecker implements ISubscriber {
   private parent: MyPlugin
 
   private idForCache: number
 
+  private cache: Cache
 
-  constructor(idForCache: number, event_src: Src[], ptr: MyPlugin) {
-    this.parent = ptr
+  private eventSrc: Src[]
+
+  private noteManager: NoteManager
+
+
+  constructor(idForCache: number, eventSrc: Src[], cache: Cache, noteManager: NoteManager) {
+    this.cache = cache
     this.idForCache = idForCache
+    this.eventSrc = eventSrc
+    this.noteManager = noteManager
+  }
 
-    this.parent.cache.subscribe(idForCache, event_src, this)
-      .then(data => this.process(data))
+  public async init() {
+    const data = await this.cache.subscribe(this.idForCache, this.eventSrc, this)
+
+    const calcs = data.map(
+      el => this.process(el)
+    )
+    await Promise.all(calcs)
+
+    this.cache.unsubscribe(this.idForCache)
   }
 
 
-  private async process(pages: IPage[]) {
-    for (let page of pages) {
-      for (let tick of page.ticks) {
-        if ( isNaN(safeParseInt(tick.name)) )
-          continue
+  private async process(page: IPage) {
+    for (let tick of page.ticks) {
+      if ( isNaN(safeParseInt(tick.name)) )
+        continue
 
 
-        let text = await this.parent.fileManager.getText(page.file.path)
-        const regExp = new RegExp(`\\[t::\\s*${tick.name}(,[^\\]]*|)\\]`, "gm")
+      let text = await this.noteManager.getText(page.file.path)
+      const regExp = new RegExp(`\\[t::\\s*${tick.name}(,[^\\]]*|)\\]`, "gm")
 
-        await this.parent.fileManager.setText(
-          page.file.path,
-          text.replace(regExp, `[t::${tick.name}_$1]`)
-        )
+      await this.noteManager.setText(
+        page.file.path,
+        text.replace(regExp, `[t::${tick.name}_$1]`)
+      )
 
-        new Notice(MSG_PLG_NAME + `change tickname in ${page.file.name}: ${tick.name}`)
-      }
+      new Notice(`${MSG_PLG_NAME}: change tickname in ${page.file.name}: ${tick.name}`)
     }
 
-    this.parent.cache.unsubscribe(this.idForCache)
   }
 
   renameFile(newPage: IPage, oldPage: IPage): void {}

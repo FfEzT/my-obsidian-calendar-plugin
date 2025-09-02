@@ -1,25 +1,58 @@
 import { DURATION_TYPES } from "obsidian-dataview"
 
 export class Src {
-  constructor(path:string) {
-    this._path = path
+  constructor(path: string) {
+    this._path = path;
+    this._excludes = [];
   }
 
   public addExcludes(excludes: string[]): boolean {
-    // TODO перед добавлением проверять, что exclude внутри path
+    const isOk = excludes.every(
+      exclude => {
+        if (!exclude.startsWith(this._path))
+          return false
+
+        if (exclude !== this._path)
+          return false
+
+        return true
+      }
+    )
+
+    if (!isOk)
+      return false
+
+    this._excludes.push(...excludes)
+    this._excludes = this._excludes.unique()
+
     return true
   }
 
-  private _path: string
+  public includes(path: string): boolean {
+    if ( !path.startsWith(this._path) ) {
+      return false
+    }
 
-  get path() {
-    return this._path
+    if (!this._excludes.length)
+      return true
+
+    return this._excludes.some(
+      exclude => {
+        path.startsWith(exclude)
+      }
+    )
   }
 
-  private _excludes: string[]
+  private _path: string;
+
+  get path(): string {
+    return this._path;
+  }
+
+  private _excludes: string[];
 
   get excludes(): string[] {
-    return structuredClone(this._excludes)
+    return structuredClone(this._excludes);
   }
 }
 
@@ -100,10 +133,10 @@ export interface CalendarEvent {
 // INFO это интерфейс для Cache
 export interface ISubscriber {
   reset(): void
-  addFile(_: Src): void
-  deleteFile(_: Src): void
-  changeFile(newPage: Src, oldPage: Src): void
-  renameFile(newPage: Src, oldPage: Src): void
+  addFile(_: IPage): void
+  deleteFile(_: IPage): void
+  changeFile(newPage: IPage, oldPage: IPage): void
+  renameFile(newPage: IPage, oldPage: IPage): void
 }
 
 export interface ITasks {

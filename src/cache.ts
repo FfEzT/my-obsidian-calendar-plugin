@@ -1,22 +1,20 @@
 import MyPlugin from "./main"
-import { Notice, TAbstractFile, TFile } from "obsidian"
+import { Notice, TAbstractFile, TFile, Vault } from "obsidian"
 import { IPage, ISubscriber, Src } from "./types"
 import { isEqualObj } from "./util"
-import FileManager from "./fileManager"
+import FileManager from "./NoteManager"
 import { MSG_PLG_NAME } from "./constants"
+import NoteManager from "./NoteManager"
 
 type IPathSubscriber = {
   paths: Src[],
   subscriber: ISubscriber
 }
 
-type SubscribeData = {
-  src: Src,
-  pages: IPage[]
-}
-
 export class Cache {
-  private parrentPointer: MyPlugin
+  private noteManager: NoteManager
+
+  private vault: Vault
 
   private storage = new Map<string, IPage>()
   private subscribers = new Map<Number, IPathSubscriber>()
@@ -27,10 +25,22 @@ export class Cache {
   private initSyncResolve: (value: void | PromiseLike<void>) => void
   private isInited = false
 
-  constructor(parrentPointer: MyPlugin, fileManager: FileManager) {
-    this.parrentPointer = parrentPointer
+  constructor(noteManager: NoteManager, vault: Vault) {
+    this.noteManager = noteManager
+    this.vault = vault
+  }
 
-    this.parrentPointer.app.workspace.onLayoutReady(() => this.initStorage())
+  public async init() {
+    this.isInited = false
+
+    await this.initStorage()
+
+    this.initSyncResolve()
+    this.isInited = true
+
+    this.initSync = new Promise(
+      resolve => this.initSyncResolve = resolve
+    )
   }
 
   public getPage(path: string): IPage|undefined {
@@ -42,7 +52,7 @@ export class Cache {
     console.log("subscribers", this.subscribers)
   }
 
-  public async subscribe(id: Number, paths: Src[], subscriber: ISubscriber): Promise<SubscribeData[]> {
+  public async subscribe(id: Number, paths: Src[], subscriber: ISubscriber): Promise<IPage[]> {
     this.subscribers.set(
       id,
       {
@@ -54,23 +64,15 @@ export class Cache {
     if (!this.isInited)
       await this.initSync
 
-    const result: SubscribeData[] = []
+    const result: IPage[] = []
+    for (let [key, value] of this.storage) {
+      const isOk = paths.some(
+        el => el.includes(key)
+      )
 
-    // Для каждого запрошенного пути создаем объект SubscribeData
-    for (let path of paths) {
-      const pages: IPage[] = []
-
-      // Находим все страницы, которые начинаются с этого пути
-      for (let [key, value] of this.storage) {
-        if (key.startsWith(path.path)) {
-          pages.push(value)
-        }
+      if (isOk) {
+        result.push(value)
       }
-
-      result.push({
-        src: path,
-        pages: pages
-      })
     }
 
     return result
@@ -80,9 +82,9 @@ export class Cache {
     this.subscribers.delete(id)
   }
 
-  public renameFile(file: TFile, oldPath: string) {
+  public async renameFile(file: TFile, oldPath: string) {
     if (!this.isInited)
-      return
+      await this.initSync
 
     const oldPage = this.storage.get(oldPath) as IPage
 
@@ -96,12 +98,15 @@ export class Cache {
     this.storage.set(file.path, page)
 
     for (let [_, {paths, subscriber}] of this.subscribers) {
+      const isOk1 = paths.some( el => el.includes(file.path) )
+      const isOk2 = paths.some( el => el.includes(oldPath) )
+
       for (let path of paths) {
-        if (file.path.startsWith(path.path) && oldPath.startsWith(path.path))
+        if (isOk1 && isOk2)
           subscriber.renameFile(page, oldPage)
-        else if (oldPath.startsWith(path.path))
+        else if (isOk2)
           subscriber.deleteFile(oldPage)
-        else if (file.path.startsWith(path.path))
+        else if (isOk1)
           subscriber.addFile(page)
       }
     }
@@ -109,56 +114,49 @@ export class Cache {
 
   public async addFile(file: TFile) {
     if (!this.isInited)
-      return
+      await this.initSync
 
-    const page = await this.parrentPointer.fileManager.getPage(file)
+    const page = await this.noteManager.getPage(file)
     this.storage.set(file.path, page)
 
     for (let [_, {paths, subscriber}] of this.subscribers) {
-      for (let path of paths) {
-        if (!file.path.startsWith(path.path))
-          continue
+      const isOk = paths.some( el => el.includes(file.path) )
 
+      if (isOk)
         subscriber.addFile(page)
-      }
     }
   }
 
   public async changeFile(file: TFile) {
     if (!this.isInited)
-      return
+      await this.initSync
 
-    const page = await this.parrentPointer.fileManager.getPage(file)
+    const page = await this.noteManager.getPage(file)
     const oldPage = this.storage.get(file.path) as IPage
     if (isEqualObj(page, oldPage))
       return
 
     this.storage.set(file.path, page)
-
     for (let [_, {paths, subscriber}] of this.subscribers) {
-      for (let path of paths) {
-        if (!file.path.startsWith(path.path))
-          continue
+      const isOk = paths.some( el => el.includes(file.path) )
 
+      if (isOk)
         subscriber.changeFile(page, oldPage)
-      }
     }
   }
 
-  public deleteFile(file: TAbstractFile) {
+  public async deleteFile(file: TAbstractFile) {
     if (!this.isInited)
-      return
+      await this.initSync
 
     const page = this.storage.get(file.path) as IPage
 
     this.storage.delete(file.path)
     for (let [_, {paths, subscriber}] of this.subscribers) {
-      for (let path of paths) {
-        if (!file.path.startsWith(path.path))
-          continue
+      const isOk = paths.some( el => el.includes(file.path) )
 
+      if (isOk)
         subscriber.deleteFile(page)
-      }
     }
   }
 
@@ -169,14 +167,14 @@ export class Cache {
 
     const tmp = this.subscribers
     this.subscribers = new Map()
-    await this.initStorage()
+    await this.init() // TODO что это делает
 
     for (let [_, {subscriber}] of tmp)
       subscriber.reset()
   }
 
   private async initStorage() {
-    const tFiles = this.parrentPointer.app.vault.getMarkdownFiles()
+    const tFiles = this.vault.getMarkdownFiles()
 
     const notice = new Notice(
       `${MSG_PLG_NAME}: there are ${tFiles.length} notes`,
@@ -190,14 +188,11 @@ export class Cache {
 
       this.storage.set(
         tFile.path,
-        await this.parrentPointer.fileManager.getPage(tFile)
+        await this.noteManager.getPage(tFile)
       )
     }
 
     notice.hide()
     new Notice(`${MSG_PLG_NAME}: cache has been inited`)
-
-    this.initSyncResolve()
-    this.isInited = true
   }
 }
