@@ -98,22 +98,12 @@ export interface CalendarEvent {
 }
 
 // INFO это интерфейс для Cache
-// TODO переписать типы
-export interface MyView {
-  reset(): void
-  addFile(_:IPage): void
-  deleteFile(_: IPage): void
-  changeFile(newPage: Src, oldPage: Src): void
-  renameFile(newPage: Src, oldPage: Src): void
-}
-
-// TODO вроде это повторяет
 export interface ISubscriber {
   reset(): void
-  addFile(page: IPage): void
-  deleteFile(page: IPage): void
-  changeFile(newPage: IPage, oldPage: IPage): void
-  renameFile(newPage: IPage, oldPage: IPage): void
+  addFile(_: Src): void
+  deleteFile(_: Src): void
+  changeFile(newPage: Src, oldPage: Src): void
+  renameFile(newPage: Src, oldPage: Src): void
 }
 
 export interface ITasks {

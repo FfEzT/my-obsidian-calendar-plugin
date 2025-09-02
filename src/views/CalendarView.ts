@@ -1,14 +1,14 @@
 import { ItemView, Platform, WorkspaceLeaf, Notice, Modal, App, Setting, Menu, Component } from 'obsidian';
 import MyPlugin from "../main"
 import { MSG_PLG_NAME, TEXT_DONE, VIEW_TYPE } from '../constants';
-import { CalendarEvent, CalendarSettings, IEvent, IPage, MyView, Src } from '../types';
+import { CalendarEvent, CalendarSettings, IEvent, IPage, ISubscriber, Src } from '../types';
 import { CalendarEventToIDate, getColourFromPath, IDateToCalendarEvent, millisecToString, pageToEvents, templateIDTick, templateNameTick, timeAdd } from '../util';
 import { renderCalendar } from 'lib/obsidian-full-calendar/calendar';
 import { Calendar } from '@fullcalendar/core';
 import { Cache } from 'src/cache';
 import FileManager from 'src/fileManager';
 
-export class CalendarView extends ItemView implements MyView {
+export class CalendarView extends ItemView implements ISubscriber {
   // private parrentPointer: MyPlugin
 
   private cache: Cache
@@ -63,23 +63,26 @@ export class CalendarView extends ItemView implements MyView {
     if (Platform.isMobile)
       this.containerEl.style.height = "95vh"
 
-    const container = this.containerEl.children[1] // TODO что за дети (что в других индексах?)
+    const { containerEl } = this
+    const container = containerEl.children[1] // TODO что за дети (что в других индексах?)
     container.empty()
+    const calendarContainer = container.createDiv(/*{cls: 'class'}*/)
+    const checkBoxContainer = container.createDiv(/*{cls: 'class'}*/)
 
     // Создаем контейнер для чекбоксов
     // this.srcCheckboxContainer = container.createDiv({cls: 'calendar-src-checkboxes'})
 
-    this.render(container)
-    // .then(
-      // () => this.renderSrcCheckboxes()
-    // )
+    this.render(calendarContainer)
+    .then(
+      () => this.renderSrcCheckboxes(checkBoxContainer)
+    )
   }
 
   public onResize() {
     this.calendar?.render();
   }
 
-  public addFile(page: IPage): void {
+  public addFile(page: Src): void {
     // Проверяем, соответствует ли путь страницы выбранным источникам
     if (!this.isPageInSelectedSrc(page.file.path)) {
       return
@@ -90,18 +93,18 @@ export class CalendarView extends ItemView implements MyView {
       this.calendar?.addEvent(event)
   }
 
-  public changeFile(newPage: IPage, oldPage: IPage): void {
+  public changeFile(newPage: Src, oldPage: Src): void {
     this.calendar?.pauseRendering()
     this.deleteFile(oldPage)
     this.addFile(newPage)
     this.calendar?.resumeRendering()
   }
 
-  public renameFile(newPage: IPage, oldPage: IPage): void {
+  public renameFile(newPage: Src, oldPage: Src): void {
     this.changeFile(newPage, oldPage)
   }
 
-  public deleteFile(page: IPage): void {
+  public deleteFile(page: Src): void {
     if (!this.calendar)
       return
 
@@ -125,16 +128,15 @@ export class CalendarView extends ItemView implements MyView {
 
     this.calendar.destroy();
     this.calendar = null;
-    this.parrentPointer.cache.unsubscribe(this.idForCache)
+    this.cache.unsubscribe(this.idForCache)
   }
 
-  private renderSrcCheckboxes() {
-    if (!this.srcCheckboxContainer) return
+  private renderSrcCheckboxes(srcCheckboxContainer: HTMLElement) {
+    srcCheckboxContainer.empty()
+    srcCheckboxContainer.addClass("calendar-src-checkboxes")
 
-    this.srcCheckboxContainer.empty()
-
-    this.event_src.forEach(src => {
-      const checkboxContainer = this.srcCheckboxContainer!.createDiv({cls: 'src-checkbox-item'})
+    for (let src of this.event_src) {
+      const checkboxContainer = srcCheckboxContainer!.createDiv({cls: 'src-checkbox-item'})
 
       const checkbox = checkboxContainer.createEl('input', {
         type: 'checkbox',
@@ -157,11 +159,11 @@ export class CalendarView extends ItemView implements MyView {
         text: src.path,
         attr: {for: `src-checkbox-${src.path}`}
       })
-    })
+    }
   }
 
-  private isPageInSelectedSrc(pagePath: string): boolean {
-    // Проверяем, находится ли страница в любом из выбранных путей
+  private isPathInSrc(pagePath: string): boolean {
+    // TODO здесь не учитываются исключения
     for (const srcPath of this.selectedSrcPaths) {
       if (pagePath.startsWith(srcPath)) {
         return true
@@ -171,24 +173,21 @@ export class CalendarView extends ItemView implements MyView {
   }
 
   private async refreshCalendar() {
-    if (!this.calendar) return
+    if (!this.calendar)
+      return
 
-    // Удаляем все события
-    this.calendar.getEvents().forEach(event => event.remove())
-
-    // Добавляем события только из выбранных источников
-    const subscribeData = await this.cache.subscribe(this.idForCache, this.event_src, this)
+    this.calendar.removeAllEvents()
 
     const events: IEvent[] = []
-    for (const data of subscribeData) {
-      // Проверяем, выбран ли этот источник
-      if (this.selectedSrcPaths.has(data.src.path)) {
-        for (let page of data.pages) {
-          events.push(...pageToEvents(page))
-        }
-      }
+    for (let [key, val] of this.localStorage) {
+      if ( !this.isPathInSrc(key) )
+        continue
+
+      for (let page of val)
+        events.push( ...pageToEvents(page) )
     }
 
+    this.calendar
     events.forEach(event => this.calendar?.addEvent(event))
   }
 

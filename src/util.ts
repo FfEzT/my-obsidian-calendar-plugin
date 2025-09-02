@@ -363,7 +363,7 @@ export function pageToEvents(page: IPage): IEvent[] {
     if (page.ff_frequency)
       structure.borderColor = colours.frequency
     if (page.ff_status == TEXT_DONE)
-        structure.borderColor = colours.done
+      structure.borderColor = colours.done
 
     result.push(structure)
   }

@@ -1,10 +1,10 @@
 import { App, Notice } from "obsidian";
 import MyPlugin from "../main";
-import { IPage, MyView, Src } from "../types"
+import { IPage, ISubscriber, Src } from "../types"
 import { MSG_PLG_NAME } from "../constants";
 import { safeParseInt } from "../util";
 
-export class TickChecker implements MyView {
+export class TickChecker implements ISubscriber {
   private parent: MyPlugin
 
   private idForCache: number
