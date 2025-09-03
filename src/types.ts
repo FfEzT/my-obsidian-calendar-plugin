@@ -70,7 +70,8 @@ export type CalendarSettings = {
         color: string,
 
         // TODO remove any
-        daysOfWeek:any,display:any,
+        daysOfWeek:any,
+        display:any
     }[]
   }
 

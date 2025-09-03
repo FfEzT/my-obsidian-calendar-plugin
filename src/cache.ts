@@ -31,16 +31,14 @@ export class Cache {
   }
 
   public async init() {
-    this.isInited = false
+    // NOTE u can init only one time
+    if (this.isInited)
+      return
 
     await this.initStorage()
 
     this.initSyncResolve()
     this.isInited = true
-
-    this.initSync = new Promise(
-      resolve => this.initSyncResolve = resolve
-    )
   }
 
   public getPage(path: string): IPage|undefined {
@@ -84,7 +82,7 @@ export class Cache {
 
   public async renameFile(file: TFile, oldPath: string) {
     if (!this.isInited)
-      await this.initSync
+      return
 
     const oldPage = this.storage.get(oldPath) as IPage
 
@@ -114,7 +112,7 @@ export class Cache {
 
   public async addFile(file: TFile) {
     if (!this.isInited)
-      await this.initSync
+      return
 
     const page = await this.noteManager.getPage(file)
     this.storage.set(file.path, page)
@@ -129,7 +127,7 @@ export class Cache {
 
   public async changeFile(file: TFile) {
     if (!this.isInited)
-      await this.initSync
+      return
 
     const page = await this.noteManager.getPage(file)
     const oldPage = this.storage.get(file.path) as IPage
@@ -147,7 +145,7 @@ export class Cache {
 
   public async deleteFile(file: TAbstractFile) {
     if (!this.isInited)
-      await this.initSync
+      return
 
     const page = this.storage.get(file.path) as IPage
 

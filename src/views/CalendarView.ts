@@ -214,7 +214,10 @@ export class CalendarView extends ItemView implements ISubscriber {
   }
 
   private isPathInActiveSrc(pagePath: string): boolean {
-    return this.eventSrc.some(
+    const eventSrc = this.eventSrc.filter(
+      el => this.selectedSrcPaths.has(el.path)
+    )
+    return eventSrc.some(
       src => src.includes(pagePath)
     )
   }
@@ -225,7 +228,8 @@ export class CalendarView extends ItemView implements ISubscriber {
 
     this.calendar.removeAllEvents()
 
-    const events: IEvent[] = []
+    // @ts-ignore
+    const events: IEvent[] = [...this.calendarSettings.restTime]
     for (let page of this.localStorage) {
       if ( !this.isPathInActiveSrc(page.file.path) )
         continue
@@ -244,7 +248,7 @@ export class CalendarView extends ItemView implements ISubscriber {
 
     const events: IEvent[] = []
     for (const page of subscribedData) {
-      if (!this.selectedSrcPaths.has(page.file.path))
+      if (!this.isPathInActiveSrc(page.file.path))
         continue
 
       events.push( ...this.pageToEvents(page) )

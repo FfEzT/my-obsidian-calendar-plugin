@@ -1,5 +1,4 @@
-// import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, ItemView, Platform, WorkspaceLeaf } from 'obsidian';
-import { App, Notice, Plugin, PluginManifest, TFile, WorkspaceLeaf } from 'obsidian';
+import { App, Plugin, PluginManifest, TFile, WorkspaceLeaf } from 'obsidian';
 import { CalendarView} from "./views/CalendarView"
 import { Cache } from "./cache"
 import { PluginSettings } from './types';
