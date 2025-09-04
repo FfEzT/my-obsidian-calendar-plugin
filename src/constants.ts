@@ -47,7 +47,10 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     ]
   },
   source: {
-    noteSources: [new Src(EVENT_SRC)],
+    noteSources: [{
+      path: EVENT_SRC,
+      excludes: []
+    }],
 
     // NOTE default path where note will be created
     defaultCreatePath: PLACE_FOR_CREATING_NOTE

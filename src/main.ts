@@ -1,12 +1,13 @@
 import { App, Plugin, PluginManifest, TFile, WorkspaceLeaf } from 'obsidian';
 import { CalendarView} from "./views/CalendarView"
 import { Cache } from "./cache"
-import { PluginSettings } from './types';
+import { PluginSettings, Src } from './types';
 import { MySettingTab } from './setting';
 import { DEFAULT_SETTINGS, CACHE_ID, MSG_PLG_NAME, VIEW_TYPE } from './constants';
 import StatusCorrector from './views/statusCorrector';
 import { TickChecker } from './views/TickCheker';
 import NoteManager from './NoteManager';
+import { VaultOps } from './vaultOps';
 
 
 export default class MyPlugin extends Plugin {
@@ -42,10 +43,16 @@ export default class MyPlugin extends Plugin {
 
     this.initRegister()
 
+    const src: Src[] = []
+    for (let i of this.settings.source.noteSources) {
+      const tmp = Src.fromSrcJson(i)
+      if (tmp)
+        src.push(tmp)
+    }
 
     this.tickChecker = new TickChecker(
       CACHE_ID.TICK_CHECKER,
-      this.settings.source.noteSources,
+      src,
       this.cache,
       this.noteManager
     )
@@ -53,7 +60,7 @@ export default class MyPlugin extends Plugin {
     if (this.settings.statusCorrector.isOn) {
       this.statusCorrector = new StatusCorrector(
         CACHE_ID.STATUS_CORRECTOR,
-        this.settings.source.noteSources,
+        src,
         this.cache,
         this.noteManager
       )
@@ -78,7 +85,7 @@ export default class MyPlugin extends Plugin {
           this.calendar = new CalendarView(
             leaf,
             CACHE_ID.CALENDAR,
-            this.settings.source.noteSources,
+            src,
             this.settings.calendar,
             this.cache,
             this.noteManager,
@@ -199,6 +206,24 @@ export default class MyPlugin extends Plugin {
   private async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData())
 
-    this.addSettingTab(new MySettingTab(this.app, this));
+    // settings.source.noteSources = settings.source.noteSources.map(
+    //   (el:any) => {
+    //     const res = new Src(el.path)
+    //     for (let i of el.excludes) {
+    //       res.addExcludes(i)
+    //     }
+
+    //     return res
+    //   }
+    // )
+
+
+    this.addSettingTab(
+      new MySettingTab(
+        this.app,
+        this,
+        new VaultOps(this.app.vault)
+      )
+    );
   }
 }

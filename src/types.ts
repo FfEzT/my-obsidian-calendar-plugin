@@ -6,6 +6,21 @@ export class Src {
     this._excludes = [];
   }
 
+  static fromSrcJson(src: SrcJSON): Src|null {
+    const result = new Src(src.path)
+    if ( result.addExcludes(src.excludes) )
+      return result
+
+    return null
+  }
+
+  public toSrcJson(): SrcJSON {
+    return {
+      path: this._path,
+      excludes: [...this._excludes]
+    }
+  }
+
   public addExcludes(excludes: string[]): boolean {
     const isOk = excludes.every(
       exclude => {
@@ -28,7 +43,7 @@ export class Src {
     return true
   }
 
-  public includes(path: string): boolean {
+  public isIn(path: string): boolean {
     if ( !path.startsWith(this._path) ) {
       return false
     }
@@ -37,9 +52,7 @@ export class Src {
       return true
 
     return this._excludes.some(
-      exclude => {
-        path.startsWith(exclude)
-      }
+      exclude => path.startsWith(exclude)
     )
   }
 
@@ -54,6 +67,11 @@ export class Src {
   get excludes(): string[] {
     return structuredClone(this._excludes);
   }
+}
+
+export type SrcJSON = {
+  path: string,
+  excludes: string[]
 }
 
 export type CalendarSettings = {
@@ -82,7 +100,7 @@ export type PluginSettings = {
   },
   calendar: CalendarSettings,
   source: {
-    noteSources: Src[],
+    noteSources: SrcJSON[],
 
     // NOTE default path where note will be created
     defaultCreatePath: string

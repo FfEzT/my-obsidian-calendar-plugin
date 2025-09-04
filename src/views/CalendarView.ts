@@ -218,13 +218,15 @@ export class CalendarView extends ItemView implements ISubscriber {
       el => this.selectedSrcPaths.has(el.path)
     )
     return eventSrc.some(
-      src => src.includes(pagePath)
+      src => src.isIn(pagePath)
     )
   }
 
   private refreshCalendar() {
     if (!this.calendar)
       return
+
+    this.calendar.pauseRendering()
 
     this.calendar.removeAllEvents()
 
@@ -240,6 +242,8 @@ export class CalendarView extends ItemView implements ISubscriber {
     for (let event of events) {
       this.calendar.addEvent(event)
     }
+
+    this.calendar.resumeRendering()
   }
 
   private async render(container: Element)  {

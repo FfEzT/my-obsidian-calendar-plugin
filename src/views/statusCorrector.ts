@@ -153,7 +153,7 @@ export default class StatusCorrector implements ISubscriber {
     }
     parents = parents.unique()
       .filter(
-        el => this.eventSrc.some(src => src.includes(el.file.path))
+        el => this.eventSrc.some(src => src.isIn(el.file.path))
       )
 
     for (let parent of parents) {

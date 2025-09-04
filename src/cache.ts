@@ -65,7 +65,7 @@ export class Cache {
     const result: IPage[] = []
     for (let [key, value] of this.storage) {
       const isOk = paths.some(
-        el => el.includes(key)
+        el => el.isIn(key)
       )
 
       if (isOk) {
@@ -96,17 +96,15 @@ export class Cache {
     this.storage.set(file.path, page)
 
     for (let [_, {paths, subscriber}] of this.subscribers) {
-      const isOk1 = paths.some( el => el.includes(file.path) )
-      const isOk2 = paths.some( el => el.includes(oldPath) )
+      const isOk1 = paths.some( el => el.isIn(file.path) )
+      const isOk2 = paths.some( el => el.isIn(oldPath) )
 
-      for (let path of paths) {
-        if (isOk1 && isOk2)
-          subscriber.renameFile(page, oldPage)
-        else if (isOk2)
-          subscriber.deleteFile(oldPage)
-        else if (isOk1)
-          subscriber.addFile(page)
-      }
+      if (isOk1 && isOk2)
+        subscriber.renameFile(page, oldPage)
+      else if (isOk2)
+        subscriber.deleteFile(oldPage)
+      else if (isOk1)
+        subscriber.addFile(page)
     }
   }
 
@@ -118,7 +116,7 @@ export class Cache {
     this.storage.set(file.path, page)
 
     for (let [_, {paths, subscriber}] of this.subscribers) {
-      const isOk = paths.some( el => el.includes(file.path) )
+      const isOk = paths.some( el => el.isIn(file.path) )
 
       if (isOk)
         subscriber.addFile(page)
@@ -136,7 +134,7 @@ export class Cache {
 
     this.storage.set(file.path, page)
     for (let [_, {paths, subscriber}] of this.subscribers) {
-      const isOk = paths.some( el => el.includes(file.path) )
+      const isOk = paths.some( el => el.isIn(file.path) )
 
       if (isOk)
         subscriber.changeFile(page, oldPage)
@@ -151,7 +149,7 @@ export class Cache {
 
     this.storage.delete(file.path)
     for (let [_, {paths, subscriber}] of this.subscribers) {
-      const isOk = paths.some( el => el.includes(file.path) )
+      const isOk = paths.some( el => el.isIn(file.path) )
 
       if (isOk)
         subscriber.deleteFile(page)
