@@ -1,13 +1,18 @@
 import { Notice } from "obsidian"
-import { TEXT_BLOCKED, TEXT_DONE, TEXT_SOON, EVENT_SRC, TEXT_IN_PROGRESS, TEXT_CHILD_IN_PROGRESS, MSG_PLG_NAME } from "./constants"
-import MyPlugin from "./main"
-import { IPage } from "./types"
-import { getNotesWithoutParent, getParentNote, getChildNotePaths, getProgress } from "./util"
+import { TEXT_BLOCKED, TEXT_DONE, TEXT_SOON, TEXT_IN_PROGRESS, TEXT_CHILD_IN_PROGRESS, MSG_PLG_NAME } from "../constants"
+import { IPage, ISubscriber, Src } from "../types"
+import { getNotesWithoutParent, getParentNote, getChildNotePaths, getProgress } from "../util"
+import { Cache } from "src/cache"
+import NoteManager from "src/NoteManager"
 
-export default class StatusCorrector {
-  private parent: MyPlugin
+export default class StatusCorrector implements ISubscriber {
+  private cache: Cache
+
   private idForCache: number
-  private event_src: string[]
+
+  private eventSrc: Src[]
+
+  private noteManager: NoteManager
 
   private subscribed = false
   private whileSubscribing = new Promise(
@@ -15,17 +20,18 @@ export default class StatusCorrector {
   )
   private resolveSubscribing: (value: void | PromiseLike<void>) => void
 
-  constructor(idForCache: number, event_src: string[], parrentPointer: MyPlugin) {
-    this.parent = parrentPointer
+  constructor(idForCache: number, eventSrc: Src[], cache: Cache, noteManager: NoteManager) {
+    this.cache = cache
     this.idForCache = idForCache
-    this.event_src = event_src
+    this.eventSrc = eventSrc
+    this.noteManager = noteManager
+  }
 
-    this.parent.cache.subscribe(this.idForCache, this.event_src, this).then(
-      () => {
-        this.subscribed = true
-        this.resolveSubscribing()
-      }
-    )
+  public async init() {
+    await this.cache.subscribe(this.idForCache, this.eventSrc, this)
+
+    this.subscribed = true
+    this.resolveSubscribing()
   }
 
   private async correctNote(page: IPage): Promise<boolean> {
@@ -34,7 +40,7 @@ export default class StatusCorrector {
       return false
 
     checkProgress: {
-      const tasks = await getProgress(this.parent, page)
+      const tasks = await getProgress(this.cache, this.noteManager, page)
       if (status == TEXT_DONE && tasks.all != tasks.done) {
         status = TEXT_IN_PROGRESS
       }
@@ -58,7 +64,7 @@ export default class StatusCorrector {
       const statuses: string[] = new Array
 
       for (let children_ of child_) {
-        const children = (this.parent.cache.getPage(children_) as IPage)
+        const children = (this.cache.getPage(children_) as IPage)
 
         if (!children?.ff_status)
           continue
@@ -114,7 +120,7 @@ export default class StatusCorrector {
       return false
 
     page.ff_status = status
-    await this.parent.fileManager.changeStatusFile(page.file.path, status)
+    await this.noteManager.changeStatusFile(page.file.path, status)
 
     return true
   }
@@ -132,7 +138,24 @@ export default class StatusCorrector {
     const queuePaths: string[] = []
     const set = new Set<string>()
 
-    const parents = await getNotesWithoutParent(EVENT_SRC)
+    // let parents = []
+    const computes = []
+
+    for (let el of this.eventSrc) {
+      computes.push(
+        getNotesWithoutParent(el.path)
+      )
+    }
+    let parents_ = await Promise.all(computes)
+    let parents = []
+    for (let el of parents_) {
+      parents.push(...el)
+    }
+    parents = parents.unique()
+      .filter(
+        el => this.eventSrc.some(src => src.isIn(el.file.path))
+      )
+
     for (let parent of parents) {
       queuePaths.push(parent.file.path)
       set.add(parent.file.path)
@@ -156,7 +179,7 @@ export default class StatusCorrector {
       notice.setMessage(`${MSG_PLG_NAME}(status) ${i}/${queuePaths.length}`)
 
       await this.correctNote(
-        this.parent.cache.getPage(
+        this.cache.getPage(
           queuePaths[pointer]
         ) as IPage
       )
@@ -174,7 +197,7 @@ export default class StatusCorrector {
   public destroy() {
     // TODO: при вызове завершать запуск statusCorrector
 
-    this.parent.cache.unsubscribe(this.idForCache)
+    this.cache.unsubscribe(this.idForCache)
   }
 
   public renameFile(newPage: IPage, oldPage: IPage): void {}
@@ -194,7 +217,7 @@ export default class StatusCorrector {
 
     for (let leftPointer = 0; leftPointer < queuePaths.length; ++leftPointer) {
       const path = queuePaths[leftPointer]
-      const page = this.parent.cache.getPage(path) as IPage
+      const page = this.cache.getPage(path) as IPage
       const oldStatus = page.ff_status
 
       const isChanged = await this.correctNote(page)

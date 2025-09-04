@@ -1,4 +1,4 @@
-import { IPage, ITick, IDate, CalendarEvent, ITasks } from "./types";
+import { IPage, ITick, IDate, CalendarEvent, ITasks, IEvent } from "./types";
 import { DataviewApi } from "obsidian-dataview/lib/api/plugin-api"
 import { getAPI } from "obsidian-dataview"
 import { DURATION_TYPES } from "obsidian-dataview"
@@ -14,6 +14,8 @@ import {
   BACKGROUND_COLOUR,
 } from "./constants"
 import MyPlugin from "./main";
+import { Cache } from "./cache";
+import NoteManager from "./NoteManager";
 
 const SLEEP_TIME = 1000 // ms
 
@@ -253,10 +255,8 @@ export async function getNotesWithoutParent(src: string): Promise<IPage[]> {
   return child as IPage[]
 }
 
-export async function getProgress(plg: MyPlugin, page: IPage): Promise<ITasks> {
+export async function getProgress(cache: Cache, noteManager: NoteManager, page: IPage): Promise<ITasks> {
   const result = {done:0, all:0}
-  const cache = plg.cache
-  const fileManager = plg.fileManager
 
   await waitDvInit()
 
@@ -270,7 +270,7 @@ export async function getProgress(plg: MyPlugin, page: IPage): Promise<ITasks> {
     if (!page || !meta)
       continue
 
-    const tasks = fileManager.getTaskCount(page)
+    const tasks = noteManager.getTaskCount(page)
 
     result.all  +=  tasks.all
     result.done  +=  tasks.done
@@ -339,3 +339,4 @@ export function timeAdd(start: Date, duration: DURATION_TYPES): Date {
 
   return result
 }
+

@@ -1,12 +1,80 @@
 import { DURATION_TYPES } from "obsidian-dataview"
 
-// TODO interface -> type
-export interface IPluginSettings {
-  statusCorrector: {
-    isOn: boolean,
-    startOnStartUp: boolean
-  },
-  calendar: {
+export class Src {
+  constructor(path: string) {
+    this._path = path;
+    this._excludes = [];
+  }
+
+  static fromSrcJson(src: SrcJSON): Src|null {
+    const result = new Src(src.path)
+    if ( result.addExcludes(src.excludes) )
+      return result
+
+    return null
+  }
+
+  public toSrcJson(): SrcJSON {
+    return {
+      path: this._path,
+      excludes: [...this._excludes]
+    }
+  }
+
+  public addExcludes(excludes: string[]): boolean {
+    const isOk = excludes.every(
+      exclude => {
+        if (!exclude.startsWith(this._path))
+          return false
+
+        if (exclude !== this._path)
+          return false
+
+        return true
+      }
+    )
+
+    if (!isOk)
+      return false
+
+    this._excludes.push(...excludes)
+    this._excludes = this._excludes.unique()
+
+    return true
+  }
+
+  public isIn(path: string): boolean {
+    if ( !path.startsWith(this._path) ) {
+      return false
+    }
+
+    if (!this._excludes.length)
+      return true
+
+    return this._excludes.some(
+      exclude => path.startsWith(exclude)
+    )
+  }
+
+  private _path: string;
+
+  get path(): string {
+    return this._path;
+  }
+
+  private _excludes: string[];
+
+  get excludes(): string[] {
+    return structuredClone(this._excludes);
+  }
+}
+
+export type SrcJSON = {
+  path: string,
+  excludes: string[]
+}
+
+export type CalendarSettings = {
     slotDuration: string,
     colours: {
       frequency: string,
@@ -19,8 +87,23 @@ export interface IPluginSettings {
         endTime: string,
         color: string,
 
-        daysOfWeek:any,display:any,
+        // TODO remove any
+        daysOfWeek:any,
+        display:any
     }[]
+  }
+
+export type PluginSettings = {
+  statusCorrector: {
+    isOn: boolean,
+    startOnStartUp: boolean
+  },
+  calendar: CalendarSettings,
+  source: {
+    noteSources: SrcJSON[],
+
+    // NOTE default path where note will be created
+    defaultCreatePath: string
   }
 }
 
@@ -67,20 +150,12 @@ export interface CalendarEvent {
 }
 
 // INFO это интерфейс для Cache
-export interface MyView {
-  addFile(_:IPage): void
-  changeFile(newPage: IPage, oldPage: IPage): void
-  renameFile(newPage: IPage, oldPage: IPage): void
-  deleteFile(_: IPage): void
-  reset(): void
-}
-
 export interface ISubscriber {
-  renameFile(newPage: IPage, oldPage: IPage): void
-  deleteFile(page: IPage): void
-  addFile(page: IPage): void
-  changeFile(newPage: IPage, oldPage: IPage): void
   reset(): void
+  addFile(_: IPage): void
+  deleteFile(_: IPage): void
+  changeFile(newPage: IPage, oldPage: IPage): void
+  renameFile(newPage: IPage, oldPage: IPage): void
 }
 
 export interface ITasks {

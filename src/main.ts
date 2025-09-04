@@ -1,28 +1,41 @@
-// import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, ItemView, Platform, WorkspaceLeaf } from 'obsidian';
-import { App, Notice, Plugin, PluginManifest, TFile, WorkspaceLeaf } from 'obsidian';
-import { CalendarView, VIEW_TYPE } from "./CalendarView"
+import { App, Plugin, PluginManifest, TFile, WorkspaceLeaf } from 'obsidian';
+import { CalendarView} from "./views/CalendarView"
 import { Cache } from "./cache"
-import { IPluginSettings } from './types';
+import { PluginSettings, Src } from './types';
 import { MySettingTab } from './setting';
-import { DEFAULT_SETTINGS, EVENT_SRC, CACHE_ID, MSG_PLG_NAME } from './constants';
-import StatusCorrector from './statusCorrector';
-import FileManager from './fileManager';
-import { TickChecker } from './TickCheker';
+import { DEFAULT_SETTINGS, CACHE_ID, MSG_PLG_NAME, VIEW_TYPE } from './constants';
+import StatusCorrector from './views/statusCorrector';
+import { TickChecker } from './views/TickCheker';
+import NoteManager from './NoteManager';
+import { VaultOps } from './vaultOps';
 
 
 export default class MyPlugin extends Plugin {
-  public fileManager: FileManager
+  private noteManager: NoteManager
 
-  public cache: Cache
+  private cache: Cache
 
   private statusCorrector: StatusCorrector
+
+  private settings: PluginSettings
+
+  private tickChecker: TickChecker | void
+
+  private calendar: CalendarView | void
 
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest)
 
-    const fileManager = new FileManager(this)
-    this.fileManager = fileManager
-    this.cache = new Cache(this, fileManager)
+    const noteManager = new NoteManager(
+      this.app.vault,
+      this.app.metadataCache,
+      this.app.fileManager,
+      this.app.workspace
+    )
+    this.noteManager = noteManager
+
+    // создавать при onload и тогда же запускать initStorage
+    this.cache = new Cache(this.noteManager, this.app.vault)
   }
 
   public async onload() {
@@ -30,10 +43,27 @@ export default class MyPlugin extends Plugin {
 
     this.initRegister()
 
-    await new TickChecker(CACHE_ID.TICK_CHECKER, [EVENT_SRC], this)
+    const src: Src[] = []
+    for (let i of this.settings.source.noteSources) {
+      const tmp = Src.fromSrcJson(i)
+      if (tmp)
+        src.push(tmp)
+    }
+
+    this.tickChecker = new TickChecker(
+      CACHE_ID.TICK_CHECKER,
+      src,
+      this.cache,
+      this.noteManager
+    )
 
     if (this.settings.statusCorrector.isOn) {
-      this.statusCorrector = new StatusCorrector(CACHE_ID.STATUS_CORRECTOR, [EVENT_SRC], this)
+      this.statusCorrector = new StatusCorrector(
+        CACHE_ID.STATUS_CORRECTOR,
+        src,
+        this.cache,
+        this.noteManager
+      )
 
       if (this.settings.statusCorrector.startOnStartUp)
         this.statusCorrector.correctAllNotes()
@@ -47,9 +77,23 @@ export default class MyPlugin extends Plugin {
       });
     }
 
+    this.app.workspace.onLayoutReady(() => this.init())
+
     this.registerView(
         VIEW_TYPE,
-        (leaf: WorkspaceLeaf) => new CalendarView(leaf, CACHE_ID.CALENDAR, [EVENT_SRC], this) // TODO EVENT_SRC брать из настроек
+        (leaf: WorkspaceLeaf) => {
+          this.calendar = new CalendarView(
+            leaf,
+            CACHE_ID.CALENDAR,
+            src,
+            this.settings.calendar,
+            this.cache,
+            this.noteManager,
+            this.settings.source.defaultCreatePath
+          )
+
+          return this.calendar
+        }
     )
 
     this.addRibbonIcon("info", MSG_PLG_NAME + "Open Calendar", () => this.activateView())
@@ -72,8 +116,16 @@ export default class MyPlugin extends Plugin {
 
   public onunload() {
     // TODO как будто других не хватает destoy
-    if (this.settings.statusCorrector.isOn)
-      this.statusCorrector.destroy()
+
+    // if (this.settings?.statusCorrector.isOn)
+      this.statusCorrector?.destroy()
+  }
+
+  private async init() {
+    await this.cache.init()
+
+    this.tickChecker?.init()
+    this.statusCorrector?.init()
   }
 
   private initRegister() {
@@ -137,23 +189,41 @@ export default class MyPlugin extends Plugin {
 
   // Settings
 
-  public getSettings(): IPluginSettings {
+  public getSettings(): PluginSettings {
     // NOTE: full copy
     return JSON.parse(
       JSON.stringify(this.settings)
     )
   }
 
-  public async saveSettings(settings: IPluginSettings) {
+  public async saveSettings(settings: PluginSettings) {
     this.settings = settings
     await this.saveData(this.settings);
   }
 
 
-  private settings: IPluginSettings
 
   private async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData())
-    this.addSettingTab(new MySettingTab(this.app, this));
+
+    // settings.source.noteSources = settings.source.noteSources.map(
+    //   (el:any) => {
+    //     const res = new Src(el.path)
+    //     for (let i of el.excludes) {
+    //       res.addExcludes(i)
+    //     }
+
+    //     return res
+    //   }
+    // )
+
+
+    this.addSettingTab(
+      new MySettingTab(
+        this.app,
+        this,
+        new VaultOps(this.app.vault)
+      )
+    );
   }
 }
