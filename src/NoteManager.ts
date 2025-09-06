@@ -108,11 +108,12 @@ export default class NoteManager {
       ff_duration: dv.duration(property.ff_duration),
       ff_timeStart: dv.duration(property.ff_timeStart),
       ff_date: dv.date(property.ff_date),
-      ff_status: property.ff_status
+      // ff_status: property.ff_status
     }
 
     return {
       ...result,
+      ...property,
       ...added
     }
   }
