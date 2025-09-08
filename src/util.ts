@@ -245,12 +245,13 @@ async function waitDvInit() {
     await sleep(SLEEP_TIME)
 }
 
-export async function getNotesWithoutParent(src: string): Promise<IPage[]> {
+export async function getNotesWithoutParent(src_: string): Promise<IPage[]> {
   await waitDvInit()
-
-  const child = dv.pages(`"${src}"`).where(
-    (page: any) => !page.ff_parent
-  ).array()
+  let src = src_.slice(0, src_.length-1)
+  const folder = '"' + src + '"'
+  const child = dv.pages(folder).where(
+    (page:any) => !page.ff_parent
+  ).array();
 
   return child as IPage[]
 }
