@@ -41,7 +41,7 @@ export default class StatusCorrector implements ISubscriber {
 
     checkProgress: {
       const tasks = await getProgress(this.cache, this.noteManager, page)
-      if (status == TEXT_DONE && tasks.all != tasks.done) {
+      if (status == TEXT_DONE && tasks.all > tasks.done+1) {
         status = TEXT_IN_PROGRESS
       }
       else if (status == TEXT_SOON && tasks.done != 0) {

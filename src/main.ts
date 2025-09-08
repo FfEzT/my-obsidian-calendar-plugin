@@ -4,7 +4,7 @@ import { Cache } from "./cache"
 import { PluginSettings, Src } from './types';
 import { MySettingTab } from './setting';
 import { DEFAULT_SETTINGS, CACHE_ID, MSG_PLG_NAME, VIEW_TYPE } from './constants';
-import StatusCorrector from './views/statusCorrector';
+import StatusCorrector from './views/StatusCorrector';
 import { TickChecker } from './views/TickCheker';
 import NoteManager from './NoteManager';
 import { VaultOps } from './vaultOps';
