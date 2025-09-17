@@ -368,7 +368,7 @@ export class CalendarView extends ItemView implements ISubscriber {
               if (!nameOfFile)
                 throw 1
 
-              const pathOfFile = this.placeForCreatingNote + `/${nameOfFile}.md`
+              const pathOfFile = this.placeForCreatingNote + `${nameOfFile}.md`
               await this.noteManager.createFile(pathOfFile)
 
               setTimeout(
