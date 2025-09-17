@@ -121,9 +121,7 @@ export function getTicksFromText(text: string): ITick[] {
     const ff_timeStart = dv.duration(args[2]?.trim())
 
     const tempDuration = args[3]?.trim()
-    const ff_duration = tempDuration == 'x'
-    ? 'x'
-    : dv.duration(args[3]?.trim())
+    const ff_duration = dv.duration(args[3]?.trim())
 
     if (name == '')
       continue

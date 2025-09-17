@@ -135,7 +135,7 @@ export default class NoteManager {
       if (item.task == undefined)
         continue
 
-      if (item.task == 'x') {
+      if (item.task !== ' ') {
         ++result.done
       }
       ++result.all
