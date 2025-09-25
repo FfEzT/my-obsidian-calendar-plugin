@@ -14737,6 +14737,14 @@ var MillisecsInDay = MillisecsInHour * HoursInDay;
 var import_obsidian_dataview = __toESM(require_lib());
 var SLEEP_TIME = 1e3;
 var dv = (0, import_obsidian_dataview.getAPI)();
+function getLinkClass(path) {
+  var _a;
+  const tempPage = dv.page(path);
+  if ((_a = tempPage == null ? void 0 : tempPage.file) == null ? void 0 : _a.link) {
+    return tempPage.file.link.constructor;
+  }
+  return null;
+}
 function pathToFileWithoutFileName(path) {
   const path_separator = path.lastIndexOf("/");
   if (path_separator !== -1)
@@ -14813,7 +14821,7 @@ function getTicksFromText(text) {
       const ff_date = dv.date((_b = args[1]) == null ? void 0 : _b.trim());
       const ff_timeStart = dv.duration((_c = args[2]) == null ? void 0 : _c.trim());
       const tempDuration = (_d = args[3]) == null ? void 0 : _d.trim();
-      const ff_duration = tempDuration == "x" ? "x" : dv.duration((_e = args[3]) == null ? void 0 : _e.trim());
+      const ff_duration = dv.duration((_e = args[3]) == null ? void 0 : _e.trim());
       if (name == "")
         continue;
       result.push(
@@ -14908,12 +14916,29 @@ async function waitDvInit() {
   while (!dv.index.initialized)
     await sleep(SLEEP_TIME);
 }
-async function getNotesWithoutParent(src) {
+async function getNotesWithoutParent(src_) {
   await waitDvInit();
-  const child = dv.pages(`"${src}"`).where(
+  let src = src_.slice(0, src_.length - 1);
+  const folder = '"' + src + '"';
+  const child = dv.pages(folder).where(
     (page) => !page.ff_parent
   ).array();
   return child;
+}
+function isChildren(parentPath, childPath) {
+  const Link = getLinkClass(parentPath);
+  const page = dv.page(childPath);
+  if (!page)
+    return false;
+  if (page.ff_parent instanceof Link && page.ff_parent.path === parentPath) {
+    return true;
+  } else if (page.ff_parent instanceof Array) {
+    const cond = page.ff_parent.some(
+      (el) => el instanceof Link && el.path === parentPath
+    );
+    return cond;
+  }
+  return false;
 }
 async function getProgress(cache, noteManager, page) {
   const result = { done: 0, all: 0 };
@@ -14939,7 +14964,8 @@ async function getProgress(cache, noteManager, page) {
       if (pages.has(inlink.path))
         continue;
       pages.add(inlink.path);
-      stack.push(inlink.path);
+      if (isChildren(meta.file.path, inlink.path))
+        stack.push(inlink.path);
     }
   }
   return result;
@@ -14950,7 +14976,8 @@ async function getChildNotePaths(path) {
   const inlinks = meta == null ? void 0 : meta.file.inlinks.array();
   const result = [];
   for (let inlink of inlinks) {
-    result.push(inlink.path);
+    if (meta && isChildren(meta.file.path, inlink.path))
+      result.push(inlink.path);
   }
   return result;
 }
@@ -14960,7 +14987,8 @@ async function getParentNote(page) {
   const outlinks = meta == null ? void 0 : meta.file.outlinks.array();
   const result = [];
   for (let outlink of outlinks) {
-    result.push(dv.page(outlink.path));
+    if (meta && isChildren(outlink.path, meta.file.path))
+      result.push(dv.page(outlink.path));
   }
   return result;
 }
@@ -32135,7 +32163,7 @@ var CalendarView = class extends import_obsidian.ItemView {
             try {
               if (!nameOfFile)
                 throw 1;
-              const pathOfFile = this.placeForCreatingNote + `/${nameOfFile}.md`;
+              const pathOfFile = this.placeForCreatingNote + `${nameOfFile}.md`;
               await this.noteManager.createFile(pathOfFile);
               setTimeout(
                 () => this.noteManager.changePropertyFile(
@@ -32237,9 +32265,7 @@ var Cache2 = class {
     const result = [];
     for (let [key, value] of this.storage) {
       const isOk = paths.some(
-        (el) => {
-          return el.isIn(key);
-        }
+        (el) => el.isIn(key)
       );
       if (isOk) {
         result.push(value);
@@ -32568,7 +32594,7 @@ var MySettingTab = class extends import_obsidian3.PluginSettingTab {
   }
 };
 
-// src/views/statusCorrector.ts
+// src/views/StatusCorrector.ts
 var import_obsidian4 = require("obsidian");
 var StatusCorrector = class {
   constructor(idForCache, eventSrc, cache, noteManager) {
@@ -32592,7 +32618,7 @@ var StatusCorrector = class {
       return false;
     checkProgress: {
       const tasks = await getProgress(this.cache, this.noteManager, page);
-      if (status == TEXT_DONE && tasks.all != tasks.done) {
+      if (status == TEXT_DONE && tasks.all > tasks.done) {
         status = TEXT_IN_PROGRESS;
       } else if (status == TEXT_SOON && tasks.done != 0) {
         status = TEXT_BLOCKED;
@@ -32875,11 +32901,12 @@ var NoteManager = class {
     const added = {
       ff_duration: dv.duration(property.ff_duration),
       ff_timeStart: dv.duration(property.ff_timeStart),
-      ff_date: dv.date(property.ff_date),
-      ff_status: property.ff_status
+      ff_date: dv.date(property.ff_date)
+      // ff_status: property.ff_status
     };
     return {
       ...result,
+      ...property,
       ...added
     };
   }
@@ -32897,7 +32924,7 @@ var NoteManager = class {
       for (let item of items) {
         if (item.task == void 0)
           continue;
-        if (item.task == "x") {
+        if (item.task !== " ") {
           ++result.done;
         }
         ++result.all;

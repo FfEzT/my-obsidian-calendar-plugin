@@ -21,6 +21,14 @@ const SLEEP_TIME = 1000 // ms
 
 export const dv = getAPI() as DataviewApi
 
+function getLinkClass(path: string) {
+    const tempPage = dv.page(path)
+    if (tempPage?.file?.link) {
+        return tempPage.file.link.constructor
+    }
+    return null
+}
+
 function pathToFileWithoutFileName(path: string) {
   const path_separator = path.lastIndexOf("/");
   if (path_separator !== -1)
@@ -254,6 +262,28 @@ export async function getNotesWithoutParent(src_: string): Promise<IPage[]> {
   return child as IPage[]
 }
 
+function isChildren(parentPath: string, childPath: string): boolean {
+  const Link = getLinkClass(parentPath)
+
+  const page = dv.page(childPath)
+  if (!page)
+    return false
+
+  if (page.ff_parent instanceof Link
+      && page.ff_parent.path === parentPath)
+  {
+    return true
+  }
+  else if (page.ff_parent instanceof Array) {
+      const cond = page.ff_parent.some(
+          el => el instanceof Link && el.path === parentPath
+      )
+
+      return cond
+  }
+  return false
+}
+
 export async function getProgress(cache: Cache, noteManager: NoteManager, page: IPage): Promise<ITasks> {
   const result = {done:0, all:0}
 
@@ -272,25 +302,24 @@ export async function getProgress(cache: Cache, noteManager: NoteManager, page: 
     const tasks = noteManager.getTaskCount(page)
 
     result.all  +=  tasks.all
-    result.done  +=  tasks.done
+    result.done +=  tasks.done
 
 
     const inlinks = meta.file.inlinks.array()
-    // if (inlinks.length == 0) {
     if (page.ff_status) {
       ++result.all
 
       if (page.ff_status == TEXT_DONE)
         ++result.done
     }
-    // }
 
-    for (let inlink of inlinks ) {
+    for (let inlink of inlinks) {
       if (pages.has(inlink.path))
         continue
 
       pages.add(inlink.path)
-      stack.push(inlink.path)
+      if ( isChildren(meta.file.path, inlink.path) )
+        stack.push(inlink.path)
     }
   }
 
@@ -305,7 +334,8 @@ export async function getChildNotePaths(path: string): Promise<string[]> {
 
   const result: string[] = []
   for (let inlink of inlinks) {
-    result.push( inlink.path )
+    if (meta && isChildren(meta.file.path, inlink.path) )
+      result.push( inlink.path )
   }
 
   return result
@@ -319,7 +349,8 @@ export async function getParentNote(page: IPage): Promise<(IPage|undefined)[]> {
 
   const result: IPage[] = []
   for (let outlink of outlinks) {
-    result.push( dv.page(outlink.path) as IPage )
+    if (meta && isChildren(outlink.path, meta.file.path) )
+      result.push( dv.page(outlink.path) as IPage )
   }
 
   return result
