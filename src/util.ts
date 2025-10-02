@@ -256,7 +256,7 @@ export async function getNotesWithoutParent(src_: string): Promise<IPage[]> {
   let src = src_.slice(0, src_.length-1)
   const folder = '"' + src + '"'
   const child = dv.pages(folder).where(
-    (page:any) => !page.ff_parent
+    (page:any) => !page.ff_l_parent
   ).array();
 
   return child as IPage[]
@@ -269,13 +269,13 @@ function isChildren(parentPath: string, childPath: string): boolean {
   if (!page)
     return false
 
-  if (page.ff_parent instanceof Link
-      && page.ff_parent.path === parentPath)
+  if (page.ff_l_parent instanceof Link
+      && page.ff_l_parent.path === parentPath)
   {
     return true
   }
-  else if (page.ff_parent instanceof Array) {
-      const cond = page.ff_parent.some(
+  else if (page.ff_l_parent instanceof Array) {
+      const cond = page.ff_l_parent.some(
           el => el instanceof Link && el.path === parentPath
       )
 
