@@ -96,7 +96,7 @@ export default class MyPlugin extends Plugin {
         }
     )
 
-    this.addRibbonIcon("info", MSG_PLG_NAME + "Open Calendar", () => this.activateView())
+    this.addRibbonIcon("calendar-range", MSG_PLG_NAME + "Open Calendar", () => this.activateView())
 
     this.addCommand({
       id: 'reset-cache',
