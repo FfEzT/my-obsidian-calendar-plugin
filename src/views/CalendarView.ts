@@ -160,6 +160,9 @@ export class CalendarView extends ItemView implements ISubscriber {
         structure.borderColor = colours.frequency
       if (page.ff_status == TEXT_DONE)
         structure.borderColor = colours.done
+      else if (!page.ff_status)
+        structure.borderColor = colours.noStatus
+
 
       result.push(structure)
     }

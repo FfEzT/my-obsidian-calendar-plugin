@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
       done     : "#008E04",
       tick     : "#457E7E",
       default  : "#5e3fa8",
+      noStatus: "#000000"
     },
     restTime: [
       {daysOfWeek,display,

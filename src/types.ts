@@ -81,6 +81,7 @@ export type CalendarSettings = {
       done     : string,
       tick     : string,
       default  : string,
+      noStatus: string
     },
     restTime: {
         startTime: string,
