@@ -330,7 +330,7 @@ export class CalendarView extends ItemView implements ISubscriber {
           }
 
           const newProp = CalendarEventToIDate(event)
-          if (newPos.allDay) {
+          if (newPos.allDay && !oldPos.allDay) {
             newProp['ff_duration'] = millisecToString(
               tick.ff_duration?.as("milliseconds")
             )
@@ -352,9 +352,9 @@ export class CalendarView extends ItemView implements ISubscriber {
           }
 
           const newProp = CalendarEventToIDate(event)
-          if (newPos.allDay) {
+          if (newPos.allDay && !oldPos.allDay) {
             newProp['ff_duration'] = millisecToString(
-              page.ff_duration?.as("milliseconds")
+              page.ff_duration?.as("milliseconds") || 0
             )
           }
 

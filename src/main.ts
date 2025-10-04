@@ -34,7 +34,6 @@ export default class MyPlugin extends Plugin {
     )
     this.noteManager = noteManager
 
-    // создавать при onload и тогда же запускать initStorage
     this.cache = new Cache(this.noteManager, this.app.vault)
   }
 
