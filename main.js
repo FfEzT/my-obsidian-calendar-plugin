@@ -14657,7 +14657,8 @@ var DEFAULT_SETTINGS = {
       frequency: "#8A1717",
       done: "#008E04",
       tick: "#457E7E",
-      default: "#5e3fa8"
+      default: "#5e3fa8",
+      noStatus: "#000000"
     },
     restTime: [
       {
@@ -31991,6 +31992,8 @@ var CalendarView = class extends import_obsidian.ItemView {
         structure.borderColor = colours.frequency;
       if (page.ff_status == TEXT_DONE)
         structure.borderColor = colours.done;
+      else if (!page.ff_status)
+        structure.borderColor = colours.noStatus;
       result.push(structure);
     }
     for (let tick of page.ticks) {
@@ -32130,7 +32133,7 @@ var CalendarView = class extends import_obsidian.ItemView {
             newPos.setEnd(event.end);
           }
           const newProp = CalendarEventToIDate(event);
-          if (newPos.allDay) {
+          if (newPos.allDay && !oldPos.allDay) {
             newProp["ff_duration"] = millisecToString(
               (_a = tick.ff_duration) == null ? void 0 : _a.as("milliseconds")
             );
@@ -32147,9 +32150,9 @@ var CalendarView = class extends import_obsidian.ItemView {
             newPos.setEnd(event.end);
           }
           const newProp = CalendarEventToIDate(event);
-          if (newPos.allDay) {
+          if (newPos.allDay && !oldPos.allDay) {
             newProp["ff_duration"] = millisecToString(
-              (_b = page.ff_duration) == null ? void 0 : _b.as("milliseconds")
+              ((_b = page.ff_duration) == null ? void 0 : _b.as("milliseconds")) || 0
             );
           }
           this.noteManager.changePropertyFile(newPos.id, newProp);
@@ -32349,14 +32352,21 @@ var Cache2 = class {
       1e3 * 60
       // 60 seconds
     );
-    for (let i3 in tFiles) {
-      const tFile = tFiles[i3];
-      notice.setMessage(`${MSG_PLG_NAME}: (${i3}/${tFiles.length}) added ${tFile.path}`);
-      this.storage.set(
-        tFile.path,
-        await this.noteManager.getPage(tFile)
-      );
-    }
+    const promises = tFiles.map(
+      async (tFile, i3) => {
+        const n2 = new import_obsidian2.Notice(
+          `${MSG_PLG_NAME}: (${i3}/${tFiles.length}) added ${tFile.path}`,
+          1e3 * 60
+          // seconds
+        );
+        this.storage.set(
+          tFile.path,
+          await this.noteManager.getPage(tFile)
+        );
+        n2.hide();
+      }
+    );
+    await Promise.all(promises);
     notice.hide();
     new import_obsidian2.Notice(`${MSG_PLG_NAME}: cache has been inited`);
   }
@@ -33094,7 +33104,7 @@ var MyPlugin = class extends import_obsidian8.Plugin {
         return this.calendar;
       }
     );
-    this.addRibbonIcon("info", MSG_PLG_NAME + "Open Calendar", () => this.activateView());
+    this.addRibbonIcon("calendar-range", MSG_PLG_NAME + "Open Calendar", () => this.activateView());
     this.addCommand({
       id: "reset-cache",
       name: MSG_PLG_NAME + "Reset Cache",
