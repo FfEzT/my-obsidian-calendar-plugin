@@ -1,12 +1,28 @@
 import { ItemView, Platform, WorkspaceLeaf, Notice, Modal, App, Setting, Menu, Component } from 'obsidian';
-import MyPlugin from "../main"
-import { MSG_PLG_NAME, TEXT_DONE, VIEW_TYPE } from '../constants';
-import { CalendarEvent, CalendarSettings, IEvent, IPage, ISubscriber, Src } from '../types';
+import { MSG_PLG_NAME, TEXT_DONE, CALENDAR_VIEW_TYPE, CALENDAR_TAB_NAME } from '../constants';
+import { CalendarEvent, CalendarSettings, IPage, ISubscriber, Src } from '../types';
 import { CalendarEventToIDate, getColourFromPath, IDateToCalendarEvent, millisecToString, templateIDTick, templateNameTick, timeAdd } from '../util';
 import { renderCalendar } from 'lib/obsidian-full-calendar/calendar';
 import { Calendar } from '@fullcalendar/core';
 import { Cache } from 'src/cache';
 import NoteManager from 'src/NoteManager';
+
+
+export interface IEvent {
+  start: Date
+  end?: Date
+  id: string
+  title: string
+  allDay: boolean
+  color?: string
+  borderColor: string
+  editable: boolean
+  extendedProps?: {
+    tickName: string
+    notePath: string
+  }
+}
+
 
 export class CalendarView extends ItemView implements ISubscriber {
   // private parrentPointer: MyPlugin
@@ -27,7 +43,6 @@ export class CalendarView extends ItemView implements ISubscriber {
 
   private localStorage: IPage[]
 
-  // private srcCheckboxContainer: HTMLElement | null = null
   private placeForCreatingNote: string
 
   constructor(
@@ -53,9 +68,9 @@ export class CalendarView extends ItemView implements ISubscriber {
     }
   }
 
-  public getViewType() {return VIEW_TYPE}
+  public getViewType() {return CALENDAR_VIEW_TYPE}
 
-  public getDisplayText() {return "Calendar"}
+  public getDisplayText() {return CALENDAR_TAB_NAME}
 
   public async onOpen() {
     if (Platform.isMobile)
@@ -64,8 +79,8 @@ export class CalendarView extends ItemView implements ISubscriber {
     const { containerEl } = this
     const container = containerEl.children[1]
     container.empty()
-    const calendarContainer = container.createDiv(/*{cls: 'class'}*/)
     const checkBoxContainer = container.createDiv({cls: 'calendar-src-checkboxes'})
+    const calendarContainer = container.createDiv(/*{cls: 'class'}*/)
 
     this.render(calendarContainer)
       .then(
@@ -136,55 +151,6 @@ export class CalendarView extends ItemView implements ISubscriber {
     this.cache.unsubscribe(this.idForCache)
   }
 
-  public pageToEvents(page: IPage): IEvent[] {
-    const result: IEvent[] = []
-
-    const colours = this.calendarSettings.colours
-
-    const structureTemplate = {
-      id: "",
-      title: "",
-      borderColor: colours.default,
-      color: getColourFromPath(page.file.path),
-      editable: true,
-    }
-
-    if (page.ff_date) {
-      const structure: IEvent = {
-        ...structureTemplate,
-        id: page.file.path,
-        title: page.file.name,
-        ...IDateToCalendarEvent(page)
-      }
-      if (page.ff_frequency)
-        structure.borderColor = colours.frequency
-      if (page.ff_status == TEXT_DONE)
-        structure.borderColor = colours.done
-      else if (!page.ff_status)
-        structure.borderColor = colours.noStatus
-
-
-      result.push(structure)
-    }
-    for (let tick of page.ticks) {
-      const structure: IEvent = {
-        ...structureTemplate,
-        id: templateIDTick(page.file.path, tick.name),
-        title: templateNameTick(page.file.name, tick.name),
-        borderColor: colours.tick,
-        extendedProps: {
-          tickName: tick.name,
-          notePath: page.file.path
-        },
-        ...IDateToCalendarEvent(tick)
-      }
-      result.push(structure)
-    }
-
-    return result
-  }
-
-
   private renderSrcCheckboxes(srcCheckboxContainer: HTMLElement) {
     srcCheckboxContainer.empty()
     srcCheckboxContainer.addClass("calendar-src-checkboxes")
@@ -249,6 +215,53 @@ export class CalendarView extends ItemView implements ISubscriber {
     this.calendar.resumeRendering()
   }
 
+  private pageToEvents(page: IPage): IEvent[] {
+    const result: IEvent[] = []
+
+    const colours = this.calendarSettings.colours
+
+    const structureTemplate = {
+      id: "",
+      title: "",
+      borderColor: colours.default,
+      color: getColourFromPath(page.file.path),
+      editable: true,
+    }
+
+    if (page.ff_date) {
+      const structure: IEvent = {
+        ...structureTemplate,
+        id: page.file.path,
+        title: page.file.name,
+        ...IDateToCalendarEvent(page)
+      }
+      if (page.ff_frequency)
+        structure.borderColor = colours.frequency
+      if (page.ff_status == TEXT_DONE)
+        structure.borderColor = colours.done
+      else if (!page.ff_status)
+        structure.borderColor = colours.noStatus
+
+      result.push(structure)
+    }
+    for (let tick of page.ticks) {
+      const structure: IEvent = {
+        ...structureTemplate,
+        id: templateIDTick(page.file.path, tick.name),
+        title: templateNameTick(page.file.name, tick.name),
+        borderColor: colours.tick,
+        extendedProps: {
+          tickName: tick.name,
+          notePath: page.file.path
+        },
+        ...IDateToCalendarEvent(tick)
+      }
+      result.push(structure)
+    }
+
+    return result
+  }
+
   private async render(container: Element)  {
     const subscribedData = await this.cache.subscribe(this.idForCache, this.eventSrc, this)
     this.localStorage = subscribedData
@@ -286,19 +299,18 @@ export class CalendarView extends ItemView implements ISubscriber {
     this.calendar.render()
   }
 
+
   private getSettingsCalendar() {
     const result = {
       firstDay: 1,
       weekNumbers: true,
       timeFormat24h: true,
 
-      // TODO remove any
       eventClick: (arg: any) => {
         const {event, jsEvent} = arg
-        this.noteManager.openNote(event)
+        this.noteManager.openNote(getPathFromEvent(event))
       },
 
-      // TODO remove any
       modifyEvent: async (newPos: any, oldPos: any) => {
         const props = newPos.extendedProps
 
@@ -358,13 +370,20 @@ export class CalendarView extends ItemView implements ISubscriber {
             )
           }
 
-          this.noteManager.changePropertyFile(newPos.id, newProp)
+          this.noteManager.changePropertyFile(
+            newPos.id,
+            property => {
+              property['ff_date']      = newProp['ff_date'].toISOString().slice(0,-14)
+              property['ff_timeStart'] = newProp['ff_timeStart']
+              property['ff_duration']  = newProp['ff_duration']
+            }
+          )
         }
 
         return true
       },
       select: (start: Date, end: Date, allDay: boolean, __viewMode: any) => {
-        new nameModal(
+        new NameModal(
           this.app,
           async (nameOfFile: string) => {
             try {
@@ -377,7 +396,13 @@ export class CalendarView extends ItemView implements ISubscriber {
               setTimeout(
                 () => this.noteManager.changePropertyFile(
                   pathOfFile,
-                  CalendarEventToIDate({start, end, allDay})
+                  property => {
+                    const newProp = CalendarEventToIDate({start, end, allDay})
+
+                    property['ff_date']      = newProp['ff_date'].toISOString().slice(0,-14)
+                    property['ff_timeStart'] = newProp['ff_timeStart']
+                    property['ff_duration']  = newProp['ff_duration']
+                  }
                 ),
                 1500
               )
@@ -411,14 +436,18 @@ export class CalendarView extends ItemView implements ISubscriber {
 
     menu.addItem(
       (item) => item.setTitle(event.id)
-        .onClick(async () => this.noteManager.openNote(event))
+        .onClick(
+          () => this.noteManager.openNote(getPathFromEvent(event))
+        )
+
     )
 
     menu.showAtMouseEvent(mouseEvent)
   }
 }
 
-class nameModal extends Modal {
+
+class NameModal extends Modal {
   private result: string
   private onSubmit: Function
 
@@ -452,3 +481,9 @@ class nameModal extends Modal {
     this.contentEl.empty();
   }
 }
+
+
+function getPathFromEvent(event: IEvent): string {
+  return event?.extendedProps?.notePath || event.id
+}
+

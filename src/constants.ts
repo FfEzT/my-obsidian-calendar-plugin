@@ -61,11 +61,16 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 
 export enum CACHE_ID {
   CALENDAR = 1,
+  GANTT,
   STATUS_CORRECTOR,
   TICK_CHECKER
 }
 
-export const VIEW_TYPE = "my-obsidian-calendar-plugin"
+export const CALENDAR_VIEW_TYPE = `${MSG_PLG_NAME}-calendar-view`
+export const GANTT_VIEW_TYPE = `${MSG_PLG_NAME}-gantt-view`
+
+export const CALENDAR_TAB_NAME = 'Calendar'
+export const GANTT_TAB_NAME = 'Gantt'
 
 
 // TODO переделать в TEXT = {DONE...BLOCKED}
@@ -101,7 +106,7 @@ export const BACKGROUND_COLOUR = {
 const MillisecsInSecond = 1000
 const SecsInMinute = 60
 const MinutesInHour = 60
-export const HoursInDay = 24
+const HoursInDay = 24
 export const MillisecsInMinute = MillisecsInSecond * SecsInMinute
 export const MillisecsInHour = MillisecsInMinute * MinutesInHour
 export const MillisecsInDay = MillisecsInHour * HoursInDay

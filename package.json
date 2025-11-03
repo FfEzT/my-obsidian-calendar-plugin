@@ -31,6 +31,7 @@
 		"@fullcalendar/multimonth": "^6.1.15",
 		"@fullcalendar/rrule": "^6.1.15",
 		"@fullcalendar/timegrid": "^6.1.15",
+		"frappe-gantt": "^1.0.4",
 		"obsidian-dataview": "^0.5.67"
 	}
 }

@@ -74,25 +74,28 @@ export type SrcJSON = {
   excludes: string[]
 }
 
+// TODO перенести
 export type CalendarSettings = {
-    slotDuration: string,
-    colours: {
-      frequency: string,
-      done     : string,
-      tick     : string,
-      default  : string,
-      noStatus: string
-    },
-    restTime: {
-        startTime: string,
-        endTime: string,
-        color: string,
+  slotDuration: string,
+  colours: {
+    frequency: string,
+    done     : string,
+    tick     : string,
+    default  : string,
+    noStatus: string
+  },
+  restTime: {
+      startTime: string,
+      endTime: string,
+      color: string,
 
-        // TODO remove any
-        daysOfWeek:any,
-        display:any
-    }[]
-  }
+      // TODO remove any
+      daysOfWeek:any,
+      display:any
+  }[]
+}
+
+export type GanttSettings = {}
 
 export type PluginSettings = {
   statusCorrector: {
@@ -125,23 +128,13 @@ export interface IPage extends IDate {
     name: string
   },
   ticks: ITick[]
-  ff_frequency?: string
-  ff_status?: string
-}
 
-export interface IEvent {
-  start: Date
-  end?: Date
-  id: string
-  title: string
-  allDay: boolean
-  color?: string
-  borderColor: string
-  editable: boolean
-  extendedProps?: {
-    tickName: string
-    notePath: string
-  }
+  // TODO все названия этих полей брать из настроек
+  ff_frequency?: string
+  ff_status?: string,
+  ff_dateStart?: Date,
+  ff_deadline?: Date,
+  ff_doDays: number
 }
 
 export interface CalendarEvent {
