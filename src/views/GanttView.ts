@@ -1,5 +1,5 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
-import Gantt from 'frappe-gantt'
+import Gantt from '../../lib/frappe-gantt/src/index'
 import { GANTT_VIEW_TYPE, GANTT_TAB_NAME, MillisecsInDay } from '../constants';
 import {GanttSettings, IPage, ISubscriber, Src } from '../types';
 import { CalendarEventToIDate, getBlockers as getBlockersPath, getColourFromPath, getProgress, IDateToCalendarEvent, millisecToString, templateIDTick, templateNameTick, throttle, timeAdd } from '../util';
@@ -86,7 +86,7 @@ export class GanttView extends ItemView implements ISubscriber {
     container.empty()
 
     // TODO DRY (calendar)
-    const checkBoxContainer = container.createDiv({cls: 'gantt-src-checkboxes'})
+    const checkBoxContainer = container.createDiv()
 
     const htmlContainer = container.createDiv(/*{cls: 'class'}*/)
 
@@ -157,7 +157,7 @@ export class GanttView extends ItemView implements ISubscriber {
   // TODO что будет, если ResetStorage
   private renderSrcCheckboxes(srcCheckboxContainer: HTMLElement) {
     srcCheckboxContainer.empty()
-    srcCheckboxContainer.addClass("gantt-src-checkboxes")
+    srcCheckboxContainer.addClass("src-checkboxes")
 
     for (let src of this.eventSrc) {
       const checkboxContainer = srcCheckboxContainer!.createDiv({cls: 'src-checkbox-item'})

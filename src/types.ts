@@ -1,6 +1,19 @@
 import { DURATION_TYPES } from "obsidian-dataview"
 
 export class Src {
+  private _path: string;
+
+  get path(): string {
+    return this._path;
+  }
+
+  private _excludes: string[];
+
+  get excludes(): string[] {
+    return structuredClone(this._excludes);
+  }
+
+
   constructor(path: string) {
     this._path = path;
     this._excludes = [];
@@ -54,18 +67,6 @@ export class Src {
     return this._excludes.some(
       exclude => path.startsWith(exclude)
     )
-  }
-
-  private _path: string;
-
-  get path(): string {
-    return this._path;
-  }
-
-  private _excludes: string[];
-
-  get excludes(): string[] {
-    return structuredClone(this._excludes);
   }
 }
 

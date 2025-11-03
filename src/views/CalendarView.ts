@@ -25,8 +25,6 @@ export interface IEvent {
 
 
 export class CalendarView extends ItemView implements ISubscriber {
-  // private parrentPointer: MyPlugin
-
   private cache: Cache
 
   private calendar: Calendar | null = null
@@ -79,7 +77,7 @@ export class CalendarView extends ItemView implements ISubscriber {
     const { containerEl } = this
     const container = containerEl.children[1]
     container.empty()
-    const checkBoxContainer = container.createDiv({cls: 'calendar-src-checkboxes'})
+    const checkBoxContainer = container.createDiv()
     const calendarContainer = container.createDiv(/*{cls: 'class'}*/)
 
     this.render(calendarContainer)
@@ -153,7 +151,7 @@ export class CalendarView extends ItemView implements ISubscriber {
 
   private renderSrcCheckboxes(srcCheckboxContainer: HTMLElement) {
     srcCheckboxContainer.empty()
-    srcCheckboxContainer.addClass("calendar-src-checkboxes")
+    srcCheckboxContainer.addClass("src-checkboxes")
 
     for (let src of this.eventSrc) {
       const checkboxContainer = srcCheckboxContainer!.createDiv({cls: 'src-checkbox-item'})
