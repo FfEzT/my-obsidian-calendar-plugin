@@ -31932,9 +31932,8 @@ var CalendarView = class extends import_obsidian.ItemView {
     const calendarContainer = container.createDiv(
       /*{cls: 'class'}*/
     );
-    this.render(calendarContainer).then(
-      () => this.renderSrcCheckboxes(checkBoxContainer)
-    );
+    this.render(calendarContainer);
+    this.renderSrcCheckboxes(checkBoxContainer);
   }
   onResize() {
     var _a;
@@ -32015,13 +32014,22 @@ var CalendarView = class extends import_obsidian.ItemView {
       });
     }
   }
+  // TODO в рефактор (можно с помощью ООП)
   isPathInActiveSrc(pagePath) {
     const eventSrc = this.eventSrc.filter(
-      (el) => this.selectedSrcPaths.has(el.path)
+      (src2) => src2.isIn(pagePath)
     );
-    return eventSrc.some(
-      (src) => src.isIn(pagePath)
+    if (eventSrc.length == 0)
+      return false;
+    const src = eventSrc.reduce(
+      (prevSrc, curSrc) => {
+        if (prevSrc.getFolderDepth() < curSrc.getFolderDepth())
+          return curSrc;
+        return prevSrc;
+      },
+      eventSrc[0]
     );
+    return this.selectedSrcPaths.has(src.path);
   }
   refreshCalendar() {
     if (!this.calendar)
@@ -32386,21 +32394,17 @@ var Cache2 = class {
       1e3 * 60
       // 60 seconds
     );
-    const promises = tFiles.map(
-      async (tFile, i3) => {
-        const n2 = new import_obsidian2.Notice(
-          `${MSG_PLG_NAME}: (${i3}/${tFiles.length}) added ${tFile.path}`,
-          1e3 * 60
-          // seconds
-        );
-        this.storage.set(
-          tFile.path,
-          await this.noteManager.getPage(tFile)
-        );
-        n2.hide();
-      }
-    );
-    await Promise.all(promises);
+    const n2 = new import_obsidian2.Notice("", 1e3 * 60);
+    for (let [i3, tFile] of tFiles.entries()) {
+      n2.setMessage(
+        `${MSG_PLG_NAME}: (${i3}/${tFiles.length}) added ${tFile.path}`
+      );
+      this.storage.set(
+        tFile.path,
+        await this.noteManager.getPage(tFile)
+      );
+    }
+    n2.hide();
     notice.hide();
     new import_obsidian2.Notice(`${MSG_PLG_NAME}: cache has been inited`);
   }
@@ -32455,6 +32459,9 @@ var Src = class {
     return this._excludes.some(
       (exclude) => path.startsWith(exclude)
     );
+  }
+  getFolderDepth() {
+    return this._path.split("/").length;
   }
 };
 
@@ -33808,6 +33815,7 @@ var Bar = class {
     let timeout;
     $3.on(this.group, "mouseenter", (e3) => {
       timeout = setTimeout(() => {
+        var _a;
         if (this.gantt.options.popup_on === "hover")
           this.gantt.show_popup({
             x: e3.offsetX || e3.layerX,
@@ -33815,15 +33823,15 @@ var Bar = class {
             task: this.task,
             target: this.$bar
           });
-        this.gantt.$container.querySelector(`.highlight-${task_id}`).classList.remove("hide");
+        (_a = this.gantt.$container.querySelector(`.highlight-${task_id}`)) == null ? void 0 : _a.classList.remove("hide");
       }, 200);
     });
     $3.on(this.group, "mouseleave", () => {
-      var _a, _b;
+      var _a, _b, _c;
       clearTimeout(timeout);
       if (this.gantt.options.popup_on === "hover")
         (_b = (_a = this.gantt.popup) == null ? void 0 : _a.hide) == null ? void 0 : _b.call(_a);
-      this.gantt.$container.querySelector(`.highlight-${task_id}`).classList.add("hide");
+      (_c = this.gantt.$container.querySelector(`.highlight-${task_id}`)) == null ? void 0 : _c.classList.add("hide");
     });
     $3.on(this.group, "click", () => {
       this.gantt.trigger_event("click", [this.task]);
@@ -35598,7 +35606,6 @@ var _GanttView = class extends import_obsidian8.ItemView {
     this.idForCache = idForCache;
     this.eventSrc = eventSrc;
     this.noteManager = noteManager;
-    this.ganttSettings = ganttSettings;
     this.localStorage = new Graph(cache, noteManager);
     for (let src of eventSrc) {
       this.selectedSrcPaths.add(src.path);
@@ -35618,8 +35625,8 @@ var _GanttView = class extends import_obsidian8.ItemView {
     const htmlContainer = container.createDiv(
       /*{cls: 'class'}*/
     );
-    this.renderSrcCheckboxes(checkBoxContainer);
     this.render(htmlContainer);
+    this.renderSrcCheckboxes(checkBoxContainer);
   }
   // public onResize() {}
   addFile(data) {
@@ -35627,7 +35634,7 @@ var _GanttView = class extends import_obsidian8.ItemView {
     this.localStorage.getEvents().then(
       (events) => {
         events = events.filter(
-          (event) => this.isPathInActiveSrc(event.id)
+          (event) => this.isPathInActiveSrc(event.extra.path)
         );
         this.gantt.clear();
         this.gantt.refresh(events);
@@ -35655,12 +35662,12 @@ var _GanttView = class extends import_obsidian8.ItemView {
   async refresh() {
     const events = await this.localStorage.getEvents();
     const events_ = events.filter(
-      (event) => this.isPathInActiveSrc(event.id)
+      (event) => this.isPathInActiveSrc(event.extra.path)
     );
     this.gantt.refresh(events_);
   }
-  // TODO это повторяется в CalendarView надо черех ооп делать
   // TODO что будет, если ResetStorage
+  // TODO это повторяется в CalendarView надо черех ооп делать
   renderSrcCheckboxes(srcCheckboxContainer) {
     srcCheckboxContainer.empty();
     srcCheckboxContainer.addClass("src-checkboxes");
@@ -35687,13 +35694,22 @@ var _GanttView = class extends import_obsidian8.ItemView {
       });
     }
   }
+  // TODO в рефактор (можно с помощью ООП)
   isPathInActiveSrc(pagePath) {
     const eventSrc = this.eventSrc.filter(
-      (el) => this.selectedSrcPaths.has(el.path)
+      (src2) => src2.isIn(pagePath)
     );
-    return eventSrc.some(
-      (src) => src.isIn(pagePath)
+    if (eventSrc.length == 0)
+      return false;
+    const src = eventSrc.reduce(
+      (prevSrc, curSrc) => {
+        if (prevSrc.getFolderDepth() < curSrc.getFolderDepth())
+          return curSrc;
+        return prevSrc;
+      },
+      eventSrc[0]
     );
+    return this.selectedSrcPaths.has(src.path);
   }
   async render(container) {
     container.id = _GanttView.CONTAINER_ID;
@@ -35703,7 +35719,7 @@ var _GanttView = class extends import_obsidian8.ItemView {
     }
     const events = await this.localStorage.getEvents().then(
       (events2) => events2.filter(
-        (event) => this.isPathInActiveSrc(event.id)
+        (event) => this.isPathInActiveSrc(event.extra.path)
       )
     );
     this.gantt = new Gantt(`#${_GanttView.CONTAINER_ID}`, events, this.getGanttSettings());
@@ -35828,12 +35844,16 @@ var Graph = class {
     const result = [...children.flat()];
     if (progress != 100)
       result.unshift({
-        id: event.id,
+        // @ts-ignore
+        id: event.id.replaceAll("/", "-"),
         name: event.name,
         start,
         end,
         progress,
-        dependencies: from.map((el) => el.event.id).join(),
+        dependencies: from.map((el) => (
+          // @ts-ignore
+          el.event.id.replaceAll("/", "-")
+        )).join(),
         custom_class: colour,
         extra: {
           path: event.id

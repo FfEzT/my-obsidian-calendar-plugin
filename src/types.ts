@@ -13,7 +13,6 @@ export class Src {
     return structuredClone(this._excludes);
   }
 
-
   constructor(path: string) {
     this._path = path;
     this._excludes = [];
@@ -67,6 +66,10 @@ export class Src {
     return this._excludes.some(
       exclude => path.startsWith(exclude)
     )
+  }
+
+  public getFolderDepth(): number {
+    return this._path.split('/').length
   }
 }
 

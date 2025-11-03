@@ -176,13 +176,11 @@ export class Cache {
       `${MSG_PLG_NAME}: there are ${tFiles.length} notes`,
       1000 * 60 // 60 seconds
     )
+    const n = new Notice('', 1000*60)
 
-    const promises = tFiles.map(
-      async (tFile, i) => {
-
-        const n = new Notice(
-          `${MSG_PLG_NAME}: (${i}/${tFiles.length}) added ${tFile.path}`,
-          1000 * 60 // seconds
+    for (let [i, tFile] of tFiles.entries()) {
+        n.setMessage(
+          `${MSG_PLG_NAME}: (${i}/${tFiles.length}) added ${tFile.path}`
         )
 
         this.storage.set(
@@ -190,13 +188,10 @@ export class Cache {
           await this.noteManager.getPage(tFile)
         )
 
-        n.hide()
-      }
-    )
-
-    await Promise.all(promises)
-
+    }
+    n.hide()
     notice.hide()
+
     new Notice(`${MSG_PLG_NAME}: cache has been inited`)
   }
 }

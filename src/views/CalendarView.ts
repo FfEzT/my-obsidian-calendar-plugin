@@ -81,9 +81,7 @@ export class CalendarView extends ItemView implements ISubscriber {
     const calendarContainer = container.createDiv(/*{cls: 'class'}*/)
 
     this.render(calendarContainer)
-      .then(
-        () => this.renderSrcCheckboxes(checkBoxContainer)
-      )
+    this.renderSrcCheckboxes(checkBoxContainer)
   }
 
   public onResize() {
@@ -180,13 +178,25 @@ export class CalendarView extends ItemView implements ISubscriber {
     }
   }
 
+  // TODO в рефактор (можно с помощью ООП)
   private isPathInActiveSrc(pagePath: string): boolean {
     const eventSrc = this.eventSrc.filter(
-      el => this.selectedSrcPaths.has(el.path)
-    )
-    return eventSrc.some(
       src => src.isIn(pagePath)
     )
+    if (eventSrc.length == 0)
+      return false
+
+    const src = eventSrc.reduce(
+      (prevSrc, curSrc) => {
+        if (prevSrc.getFolderDepth() < curSrc.getFolderDepth())
+          return curSrc
+
+        return prevSrc
+      },
+      eventSrc[0]
+    )
+
+    return this.selectedSrcPaths.has(src.path)
   }
 
   private refreshCalendar() {

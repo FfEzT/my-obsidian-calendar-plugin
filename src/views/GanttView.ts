@@ -47,7 +47,7 @@ export class GanttView extends ItemView implements ISubscriber {
   private noteManager: NoteManager
 
   // TODO зачем?
-  private ganttSettings: GanttSettings
+  // private ganttSettings: GanttSettings
 
   private localStorage: Graph
 
@@ -67,7 +67,7 @@ export class GanttView extends ItemView implements ISubscriber {
     this.idForCache = idForCache
     this.eventSrc = eventSrc
     this.noteManager = noteManager
-    this.ganttSettings = ganttSettings
+    // this.ganttSettings = ganttSettings
 
     this.localStorage = new Graph(cache, noteManager)
 
@@ -90,11 +90,8 @@ export class GanttView extends ItemView implements ISubscriber {
 
     const htmlContainer = container.createDiv(/*{cls: 'class'}*/)
 
-    this.renderSrcCheckboxes(checkBoxContainer)
     this.render(htmlContainer)
-      // .then(
-      //   () =>
-      // )
+    this.renderSrcCheckboxes(checkBoxContainer)
   }
 
   // public onResize() {}
@@ -107,7 +104,7 @@ export class GanttView extends ItemView implements ISubscriber {
       .then(
         events => {
           events = events.filter(
-            event => this.isPathInActiveSrc(event.id)
+            event => this.isPathInActiveSrc(event.extra.path)
           )
 
           this.gantt.clear()
@@ -146,15 +143,15 @@ export class GanttView extends ItemView implements ISubscriber {
       .getEvents()
 
     const events_ = events.filter(
-        event => this.isPathInActiveSrc(event.id)
+        event => this.isPathInActiveSrc(event.extra.path)
       )
     this.gantt.refresh(events_)
   }
 
 
 
-  // TODO это повторяется в CalendarView надо черех ооп делать
   // TODO что будет, если ResetStorage
+  // TODO это повторяется в CalendarView надо черех ооп делать
   private renderSrcCheckboxes(srcCheckboxContainer: HTMLElement) {
     srcCheckboxContainer.empty()
     srcCheckboxContainer.addClass("src-checkboxes")
@@ -186,13 +183,25 @@ export class GanttView extends ItemView implements ISubscriber {
     }
   }
 
+  // TODO в рефактор (можно с помощью ООП)
   private isPathInActiveSrc(pagePath: string): boolean {
     const eventSrc = this.eventSrc.filter(
-      el => this.selectedSrcPaths.has(el.path)
-    )
-    return eventSrc.some(
       src => src.isIn(pagePath)
     )
+    if (eventSrc.length == 0)
+      return false
+
+    const src = eventSrc.reduce(
+      (prevSrc, curSrc) => {
+        if (prevSrc.getFolderDepth() < curSrc.getFolderDepth())
+          return curSrc
+
+        return prevSrc
+      },
+      eventSrc[0]
+    )
+
+    return this.selectedSrcPaths.has(src.path)
   }
 
   private async render(container: Element)  {
@@ -206,7 +215,7 @@ export class GanttView extends ItemView implements ISubscriber {
     const events = await this.localStorage
       .getEvents().then(
         events => events.filter(
-          event => this.isPathInActiveSrc(event.id)
+          event => this.isPathInActiveSrc(event.extra.path)
         )
       )
 
@@ -390,12 +399,16 @@ class Graph {
     const result = [...children.flat()]
     if (progress != 100)
       result.unshift({
-        id: event.id,
+        // @ts-ignore
+        id: event.id.replaceAll('/', '-'),
         name: event.name,
         start,
         end,
         progress,
-        dependencies: from.map(el => el.event.id).join(),
+        dependencies: from.map(el =>
+          // @ts-ignore
+          el.event.id.replaceAll('/', '-'))
+          .join(),
         custom_class: colour,
         extra: {
           path: event.id
