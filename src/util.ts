@@ -1,4 +1,4 @@
-import { IPage, ITick, IDate, CalendarEvent, ITasks, IEvent } from "./types";
+import { IPage, ITick, IDate, CalendarEvent, ITasks } from "./types";
 import { DataviewApi } from "obsidian-dataview/lib/api/plugin-api"
 import { getAPI } from "obsidian-dataview"
 import { DURATION_TYPES } from "obsidian-dataview"
@@ -36,6 +36,7 @@ function pathToFileWithoutFileName(path: string) {
   return "";
 }
 
+// TODO в calendar переводить?
 export function IDateToCalendarEvent(args: IDate): CalendarEvent {
   const structure: CalendarEvent = {
     start: new Date(args.ff_date),
@@ -180,6 +181,10 @@ export function isEqualObj(object1:any, object2:any) {
   for (const key of keys1) {
     const val1 = object1[key];
     const val2 = object2[key];
+
+    if (val1 instanceof Date && val2 instanceof Date) {
+      return val1 == val2
+    }
     const areObjects = isObject(val1) && isObject(val2);
     if (
       areObjects && !isEqualObj(val1, val2) ||
@@ -284,13 +289,31 @@ function isChildren(parentPath: string, childPath: string): boolean {
   return false
 }
 
-export async function getProgress(cache: Cache, noteManager: NoteManager, page: IPage): Promise<ITasks> {
+export function getBlockers(path: string): string[] {
+  const Link = getLinkClass(path)
+
+  const page = dv.page(path)
+  if (!page)
+    return []
+
+  if (page.ff_l_blocks instanceof Array) {
+    return page.ff_l_blocks
+    .filter(el => el instanceof Link)
+    .map(
+      link => link.path
+    )
+  }
+  return []
+
+}
+
+export async function getProgress(cache: Cache, noteManager: NoteManager, filePath: string): Promise<ITasks> {
   const result = {done:0, all:0}
 
   await waitDvInit()
 
   const pages = new Set()
-  const stack = [page.file.path]
+  const stack = [filePath]
   while (stack.length > 0) {
     const path = stack.pop() as string
     const page = cache.getPage(path)
@@ -370,3 +393,31 @@ export function timeAdd(start: Date, duration: DURATION_TYPES): Date {
   return result
 }
 
+export function throttle(func: Function, ms: number): Function {
+  let isThrottled = false,
+    savedArgs: any,
+    savedThis: any;
+
+  function wrapper() {
+
+    if (isThrottled) {
+      savedArgs = arguments;
+      savedThis = this;
+      return;
+    }
+
+    func.apply(this, arguments);
+
+    isThrottled = true;
+
+    setTimeout(function() {
+      isThrottled = false;
+      if (savedArgs) {
+        wrapper.apply(savedThis, savedArgs);
+        savedArgs = savedThis = null;
+      }
+    }, ms);
+  }
+
+  return wrapper;
+}

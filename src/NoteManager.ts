@@ -1,6 +1,5 @@
 import { App, FileManager, MetadataCache, Notice, TFile, Vault, Workspace } from "obsidian";
-import MyPlugin from "./main";
-import { IEvent, IPage, ITasks, IDate } from "./types";
+import { IPage, ITasks, IDate } from "./types";
 import { CalendarEventToIDate, dv, getTicksFromText } from "./util";
 import { MSG_PLG_NAME } from "./constants";
 
@@ -30,17 +29,10 @@ export default class NoteManager {
     new Notice(MSG_PLG_NAME + "created " + path)
   }
 
-  public async changePropertyFile(path: string, event: IDate) {
+  public async changePropertyFile(path: string, callback: ((properies: any) => void)) {
     // NOTE это отправит сигнал cache
     const tFile = this.metadataCache.getFirstLinkpathDest(path, '') as TFile
-    await this.fileManager.processFrontMatter(
-      tFile,
-      property => {
-        property['ff_date']      = event['ff_date'].toISOString().slice(0,-14)
-        property['ff_timeStart'] = event['ff_timeStart']
-        property['ff_duration']  = event['ff_duration']
-      }
-    )
+    await this.fileManager.processFrontMatter(tFile, callback)
   }
 
   public async changeStatusFile(path: string, status: string) {
@@ -71,11 +63,9 @@ export default class NoteManager {
     )
   }
 
-  public openNote(event: IEvent) {
+  public openNote(path: string) {
     // NOTE сначала проверяет тик ли это, а потом переходит к id
-    const tFile = this.metadataCache.getFirstLinkpathDest(
-      event?.extendedProps?.notePath || event.id, ''
-    )
+    const tFile = this.metadataCache.getFirstLinkpathDest(path, '')
 
     // false = open in the current tab
     const leaf = this.workspace.getLeaf(true)
@@ -108,8 +98,10 @@ export default class NoteManager {
       ff_duration: dv.duration(property.ff_duration),
       ff_timeStart: dv.duration(property.ff_timeStart),
       ff_date: dv.date(property.ff_date),
-      // ff_status: property.ff_status
+      ff_deadline: undefined as Date|undefined
     }
+    if (property.ff_deadline)
+      added.ff_deadline = new Date(property.ff_deadline)
 
     return {
       ...result,

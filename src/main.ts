@@ -1,13 +1,14 @@
-import { App, Plugin, PluginManifest, TFile, WorkspaceLeaf } from 'obsidian';
+import { App, Plugin, PluginManifest, TFile, View, WorkspaceLeaf } from 'obsidian';
 import { CalendarView} from "./views/CalendarView"
 import { Cache } from "./cache"
 import { PluginSettings, Src } from './types';
 import { MySettingTab } from './setting';
-import { DEFAULT_SETTINGS, CACHE_ID, MSG_PLG_NAME, VIEW_TYPE } from './constants';
+import { DEFAULT_SETTINGS, CACHE_ID, MSG_PLG_NAME, CALENDAR_VIEW_TYPE, GANTT_VIEW_TYPE } from './constants';
 import StatusCorrector from './views/StatusCorrector';
 import { TickChecker } from './views/TickCheker';
 import NoteManager from './NoteManager';
 import { VaultOps } from './vaultOps';
+import { GanttView } from './views/GanttView';
 
 
 export default class MyPlugin extends Plugin {
@@ -22,6 +23,8 @@ export default class MyPlugin extends Plugin {
   private tickChecker: TickChecker | void
 
   private calendar: CalendarView | void
+
+  private gantt: GanttView | void
 
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest)
@@ -79,23 +82,42 @@ export default class MyPlugin extends Plugin {
     this.app.workspace.onLayoutReady(() => this.init())
 
     this.registerView(
-        VIEW_TYPE,
+      CALENDAR_VIEW_TYPE,
+      (leaf: WorkspaceLeaf) => {
+        this.calendar = new CalendarView(
+          leaf,
+          CACHE_ID.CALENDAR,
+          src,
+          this.settings.calendar,
+          this.cache,
+          this.noteManager,
+          this.settings.source.defaultCreatePath
+        )
+
+        return this.calendar
+      }
+    )
+
+    this.registerView(
+        GANTT_VIEW_TYPE,
         (leaf: WorkspaceLeaf) => {
-          this.calendar = new CalendarView(
+          this.gantt = new GanttView(
             leaf,
-            CACHE_ID.CALENDAR,
+            CACHE_ID.GANTT,
             src,
-            this.settings.calendar,
+            {}, // TODO
             this.cache,
             this.noteManager,
-            this.settings.source.defaultCreatePath
           )
 
-          return this.calendar
+          return this.gantt
         }
     )
 
-    this.addRibbonIcon("calendar-range", MSG_PLG_NAME + "Open Calendar", () => this.activateView())
+
+    this.addRibbonIcon("calendar-range", MSG_PLG_NAME + "Open Calendar", () => this.activateView(CALENDAR_VIEW_TYPE))
+
+    this.addRibbonIcon("between-horizontal-start", MSG_PLG_NAME + "Open Gantt", () => this.activateView(GANTT_VIEW_TYPE))
 
     this.addCommand({
       id: 'reset-cache',
@@ -168,17 +190,17 @@ export default class MyPlugin extends Plugin {
     )
   }
 
-  private async activateView() {
-    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE)
+  private async activateView(viewType: string) {
+    const leaves = this.app.workspace.getLeavesOfType(viewType)
     if (leaves.length === 0) {
       const leaf = this.app.workspace.getLeaf(false);
       await leaf.setViewState({
-        type: VIEW_TYPE,
+        type: viewType,
         active: true,
       })
     }
     else if (leaves.length === 1) {
-      (leaves[0].view as CalendarView).onOpen()
+      (leaves[0].view as View).load()
       this.app.workspace.setActiveLeaf(leaves[0])
     }
     else for (let leaf of leaves)
@@ -204,18 +226,6 @@ export default class MyPlugin extends Plugin {
 
   private async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData())
-
-    // settings.source.noteSources = settings.source.noteSources.map(
-    //   (el:any) => {
-    //     const res = new Src(el.path)
-    //     for (let i of el.excludes) {
-    //       res.addExcludes(i)
-    //     }
-
-    //     return res
-    //   }
-    // )
-
 
     this.addSettingTab(
       new MySettingTab(
