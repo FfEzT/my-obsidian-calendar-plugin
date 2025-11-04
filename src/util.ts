@@ -289,21 +289,23 @@ function isChildren(parentPath: string, childPath: string): boolean {
   return false
 }
 
-export function getBlockers(path: string): string[] {
+export function getBlockers(path: string): Set<string> {
   const Link = getLinkClass(path)
 
   const page = dv.page(path)
   if (!page)
-    return []
+    return new Set
 
   if (page.ff_l_blocks instanceof Array) {
-    return page.ff_l_blocks
+    const paths = page.ff_l_blocks
     .filter(el => el instanceof Link)
     .map(
       link => link.path
     )
+
+    return new Set(paths)
   }
-  return []
+  return new Set
 
 }
 

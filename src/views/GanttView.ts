@@ -1,8 +1,8 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import Gantt from '../../lib/frappe-gantt/src/index'
-import { GANTT_VIEW_TYPE, GANTT_TAB_NAME, MillisecsInDay } from '../constants';
+import { GANTT_VIEW_TYPE, GANTT_TAB_NAME, MillisecsInDay, MillisecsInMinute } from '../constants';
 import {GanttSettings, IPage, ISubscriber, Src } from '../types';
-import { CalendarEventToIDate, getBlockers as getBlockersPath, getColourFromPath, getProgress, IDateToCalendarEvent, millisecToString, templateIDTick, templateNameTick, throttle, timeAdd } from '../util';
+import { CalendarEventToIDate, getBlockers, getColourFromPath, getProgress, IDateToCalendarEvent, millisecToString, templateIDTick, templateNameTick, throttle, timeAdd } from '../util';
 import { Cache } from 'src/cache';
 import NoteManager from 'src/NoteManager';
 
@@ -94,41 +94,59 @@ export class GanttView extends ItemView implements ISubscriber {
     this.renderSrcCheckboxes(checkBoxContainer)
   }
 
-  // public onResize() {}
+  public addFile(page: IPage): void {
+    this.localStorage.addPage(page)
 
-  public addFile(data: IPage): void {
-    this.localStorage.addPage(data)
-
-    this.localStorage
-      .getEvents()
-      .then(
-        events => {
-          events = events.filter(
-            event => this.isPathInActiveSrc(event.extra.path)
-          )
-
-          this.gantt.clear()
-          this.gantt.refresh(events)
-        }
-      )
-  }
-
-  public changeFile(newPage: IPage, oldPage: IPage): void {
-    this.localStorage.deletePage(oldPage)
-    // TODO если изменяемая задача блокирует кого-либо, то потеряется связь
-    this.localStorage.addPage(newPage)
+    if (!this.isPathInActiveSrc(page.file.path))
+      return
 
     this.refresh()
+  }
+
+  public async changeFile(newPage: IPage, oldPage: IPage) {
+    this.localStorage.addPage(newPage)
+    const newEvents = (await this.localStorage.getEvents())
+    .filter(
+      event => this.isPathInActiveSrc(event.extra.path)
+    )
+
+    const mapping: Map<string, IEvent> = new Map()
+    for (let event of newEvents) {
+      mapping.set(event.extra.path, event)
+    }
+
+    const events = this.gantt.tasks as Array<IEvent>
+    for (let [i, event] of events.entries()) {
+      const newEvent = mapping.get(event.extra.path)
+      if (!newEvent)
+        continue
+
+      this.gantt.update_task(event.id, newEvent)
+      mapping.delete(newEvent.extra.path)
+    }
+    for (let [key, val] of mapping.entries()) {
+      this.gantt.add_tasks([val])
+    }
   }
 
   public renameFile(newPage: IPage, oldPage: IPage): void {
-    this.changeFile(newPage, oldPage)
+    // TODO del + add
+    // this.localStorage.getEvents()
+    // .then(
+    //   events => {
+    //       const filtered = events.filter(
+    //         event => this.isPathInActiveSrc(event.extra.path)
+    //       )
+    //   }
+    // )
   }
 
-  public deleteFile(page: IPage): void {
+  public async deleteFile(page: IPage): Promise<void> {
     this.localStorage.deletePage(page)
+    if (!this.isPathInActiveSrc(page.file.path))
+      return
 
-    this.refresh()
+    await this.refresh()
   }
 
   public reset() {
@@ -139,13 +157,11 @@ export class GanttView extends ItemView implements ISubscriber {
   onunload() { }
 
   private async refresh() {
-    const events = await this.localStorage
-      .getEvents()
-
-    const events_ = events.filter(
-        event => this.isPathInActiveSrc(event.extra.path)
-      )
-    this.gantt.refresh(events_)
+    const events = (await this.localStorage.getEvents())
+    .filter(
+      event => this.isPathInActiveSrc(event.extra.path)
+    )
+    this.gantt.refresh(events)
   }
 
 
@@ -226,31 +242,37 @@ export class GanttView extends ItemView implements ISubscriber {
   private getGanttSettings() {
     const date = new Date
     date.setTime(date.getTime() - 7*MillisecsInDay)
-    // const throttled_on_date_change = throttle(
-    //   async (task: IEvent, start: Date, end: Date) => {
-    //     await this.noteManager.changePropertyFile(
-    //       task.extra.path,
-    //       property => {
-    //         property['ff_deadline'] = end.toISOString().slice(0,-14)
-    //         property['ff_doDays'] = Math.floor(
-    //           (end.getTime() - start.getTime()) / MillisecsInDay
-    //         )
-    //       }
-    //     )
-    //   },
-    //   500
-    // )
 
     // TODO смена тем
     // TODO перенести либу ганта себе в репо + пропатчить css-стили
     return {
       infinite_padding: false,
       move_dependencies: false,
-      readonly: true,
+      readonly_progress: true,
+      // readonly: true,
       scroll_to: date,
 
-      // on_mouseup: throttled_on_date_change,
-      on_click: (event: IEvent) => {console.log(event); this.noteManager.openNote(event.extra.path);}
+      on_date_change: async (task: IEvent, start: Date, end: Date) => {
+        // ! для ISO (он переводит в гринвич мое время)
+        // я тут говорю, что я в гринвиче
+        start.setMinutes(
+          start.getMinutes() - start.getTimezoneOffset()
+        )
+        end.setMinutes(
+          end.getMinutes() - end.getTimezoneOffset() + 1 // +1 for next day
+        )
+
+        await this.noteManager.changePropertyFile(
+          task.extra.path,
+          property => {
+            property['ff_deadline'] = end.toISOString().slice(0,-14)
+            property['ff_doDays'] = Math.floor(
+              (end.getTime() - start.getTime()) / MillisecsInDay
+            )
+          }
+        )
+      },
+      // on_click: (event: IEvent) => {console.log(event); this.noteManager.openNote(event.extra.path);}
     }
   }
 }
@@ -264,8 +286,8 @@ type GraphEvent = {
 }
 
 type Node = {
-  to: Node[]
-  from: Node[]
+  to: Set<string> // path
+  from: Set<string>
   event: GraphEvent
 }
 
@@ -298,41 +320,41 @@ class Graph {
   }
 
   public addPage(page: IPage) {
-    const event = convertToEvent(page)
+    const event = convertToGraphEvent(page)
 
-    let node = this.hashTable.get(event.id)
+    const blockers = getBlockers(page.file.path)
+    for (let path of blockers) {
+      const blockNode = this.hashTable.get(path)
+      if (blockNode) {
+        blockNode.to.add(event.id)
+
+        continue
+      }
+
+      const blocker: Node = {
+        event: {
+          id: path,
+        },
+        to: new Set([event.id]),
+        from: new Set
+      }
+      this.hashTable.set(path, blocker)
+    }
+
+    const node = this.hashTable.get(event.id)
     if (node) {
       node.event = event
+
+      for (let block of blockers)
+        node.from.add(block)
+      return
     }
-    else {
-      node = { event, to: [], from: [] } as Node
-      this.hashTable.set(event.id, node)
-    }
 
-    const blockers = getBlockersPath(page.file.path).map(
-      path => {
-        const blockNode = this.hashTable.get(path)
-        if (blockNode) {
-          blockNode.to.push(node as Node)
-          return blockNode
-        }
-
-        const blocker: Node = {
-          event: {
-            id: path,
-          },
-          to: [node as Node],
-          from: []
-        }
-        this.hashTable.set(blocker.event.id, blocker)
-
-        return blocker
-      }
+    this.hashTable.set(
+      event.id,
+      { event, to: new Set, from: new Set(blockers) }
     )
 
-    for (let blocker of blockers) {
-      node.from.push(blocker)
-    }
 
   }
 
@@ -340,8 +362,8 @@ class Graph {
     this.hashTable.delete(page.file.path)
 
     for (let [key, val] of this.hashTable.entries()) {
-      val.to   = val.to.filter(el => el.event.id != page.file.path)
-      val.from = val.from.filter(el => el.event.id != page.file.path)
+      val.to.delete(page.file.path)
+      val.from.delete(page.file.path)
     }
   }
 
@@ -353,7 +375,12 @@ class Graph {
     }
 
     const children: IEvent[][] = await Promise.all(
-      to.map(
+      Array.from(to).map(
+        path => this.hashTable.get(path)
+      )
+      .filter(Boolean)
+      .map(node => node as Node)
+      .map(
         async (node) => await this.calcEvents([node, ...history])
       )
     )
@@ -405,9 +432,9 @@ class Graph {
         start,
         end,
         progress,
-        dependencies: from.map(el =>
+        dependencies: Array.from(from).map(el =>
           // @ts-ignore
-          el.event.id.replaceAll('/', '-'))
+          el.replaceAll('/', '-'))
           .join(),
         custom_class: colour,
         extra: {
@@ -421,10 +448,10 @@ class Graph {
   private getRoots(): Node[] {
     const roots = []
     for (let [key, node] of this.hashTable.entries()) {
-      if (node.from.length != 0)
+      if (node.from.size != 0)
         continue
 
-      if (node.to.length == 0 && !node.event.end)
+      if (node.to.size == 0 && !node.event.end)
         continue
 
       roots.push(node)
@@ -434,7 +461,7 @@ class Graph {
   }
 }
 
-function convertToEvent(page: IPage): GraphEvent {
+function convertToGraphEvent(page: IPage): GraphEvent {
   return {
     id: page.file.path,
     name: page.file.name,

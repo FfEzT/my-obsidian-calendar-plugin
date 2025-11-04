@@ -14951,13 +14951,14 @@ function getBlockers(path) {
   const Link = getLinkClass(path);
   const page = dv.page(path);
   if (!page)
-    return [];
+    return /* @__PURE__ */ new Set();
   if (page.ff_l_blocks instanceof Array) {
-    return page.ff_l_blocks.filter((el) => el instanceof Link).map(
+    const paths = page.ff_l_blocks.filter((el) => el instanceof Link).map(
       (link) => link.path
     );
+    return new Set(paths);
   }
-  return [];
+  return /* @__PURE__ */ new Set();
 }
 async function getProgress(cache, noteManager, filePath) {
   const result = { done: 0, all: 0 };
@@ -33734,14 +33735,14 @@ var Bar = class {
   draw_resize_handles() {
     if (this.invalid || this.gantt.options.readonly)
       return;
-    const bar = this.$bar;
+    const bar2 = this.$bar;
     const handle_width = 3;
     this.handles = [];
     if (!this.gantt.options.readonly_dates) {
       this.handles.push(
         createSVG("rect", {
-          x: bar.getEndX() - handle_width / 2,
-          y: bar.getY() + this.height / 4,
+          x: bar2.getEndX() - handle_width / 2,
+          y: bar2.getY() + this.height / 4,
           width: handle_width,
           height: this.height / 2,
           rx: 2,
@@ -33752,8 +33753,8 @@ var Bar = class {
       );
       this.handles.push(
         createSVG("rect", {
-          x: bar.getX() - handle_width / 2,
-          y: bar.getY() + this.height / 4,
+          x: bar2.getX() - handle_width / 2,
+          y: bar2.getY() + this.height / 4,
           width: handle_width,
           height: this.height / 2,
           rx: 2,
@@ -33865,7 +33866,7 @@ var Bar = class {
     });
   }
   update_bar_position({ x: x4 = null, width = null }) {
-    const bar = this.$bar;
+    const bar2 = this.$bar;
     if (x4) {
       const xs = this.task.dependencies.map((dep) => {
         return this.gantt.get_bar(dep).$bar.getX();
@@ -33875,17 +33876,16 @@ var Bar = class {
       }, true);
       if (!valid_x)
         return;
-      this.update_attr(bar, "x", x4);
+      this.update_attr(bar2, "x", x4);
       this.x = x4;
       this.$date_highlight.style.left = x4 + "px";
     }
     if (width > 0) {
-      this.update_attr(bar, "width", width);
+      this.update_attr(bar2, "width", width);
       this.$date_highlight.style.width = width + "px";
     }
     this.update_label_position();
     this.update_handle_position();
-    this.date_changed();
     this.compute_duration();
     if (this.gantt.options.show_expected_progress) {
       this.update_expected_progressbar_position();
@@ -33951,14 +33951,14 @@ var Bar = class {
     setTimeout(() => this.action_completed = false, 1e3);
   }
   compute_start_end_date() {
-    const bar = this.$bar;
-    const x_in_units = bar.getX() / this.gantt.config.column_width;
+    const bar2 = this.$bar;
+    const x_in_units = bar2.getX() / this.gantt.config.column_width;
     let new_start_date = date_utils_default.add(
       this.gantt.gantt_start,
       x_in_units * this.gantt.config.step,
       this.gantt.config.unit
     );
-    const width_in_units = bar.getWidth() / this.gantt.config.column_width;
+    const width_in_units = bar2.getWidth() / this.gantt.config.column_width;
     const new_end_date = date_utils_default.add(
       new_start_date,
       width_in_units * this.gantt.config.step,
@@ -34043,33 +34043,33 @@ var Bar = class {
   }
   update_label_position() {
     const img_mask = this.bar_group.querySelector(".img_mask") || "";
-    const bar = this.$bar, label = this.group.querySelector(".bar-label"), img = this.group.querySelector(".bar-img");
+    const bar2 = this.$bar, label = this.group.querySelector(".bar-label"), img = this.group.querySelector(".bar-img");
     let padding = 5;
     let x_offset_label_img = this.image_size + 10;
     const labelWidth = label.getBBox().width;
-    const barWidth = bar.getWidth();
+    const barWidth = bar2.getWidth();
     if (labelWidth > barWidth) {
       label.classList.add("big");
       if (img) {
-        img.setAttribute("x", bar.getEndX() + padding);
-        img_mask.setAttribute("x", bar.getEndX() + padding);
-        label.setAttribute("x", bar.getEndX() + x_offset_label_img);
+        img.setAttribute("x", bar2.getEndX() + padding);
+        img_mask.setAttribute("x", bar2.getEndX() + padding);
+        label.setAttribute("x", bar2.getEndX() + x_offset_label_img);
       } else {
-        label.setAttribute("x", bar.getEndX() + padding);
+        label.setAttribute("x", bar2.getEndX() + padding);
       }
     } else {
       label.classList.remove("big");
       if (img) {
-        img.setAttribute("x", bar.getX() + padding);
-        img_mask.setAttribute("x", bar.getX() + padding);
+        img.setAttribute("x", bar2.getX() + padding);
+        img_mask.setAttribute("x", bar2.getX() + padding);
         label.setAttribute(
           "x",
-          bar.getX() + barWidth / 2 + x_offset_label_img
+          bar2.getX() + barWidth / 2 + x_offset_label_img
         );
       } else {
         label.setAttribute(
           "x",
-          bar.getX() + barWidth / 2 - labelWidth / 2
+          bar2.getX() + barWidth / 2 - labelWidth / 2
         );
       }
     }
@@ -34077,9 +34077,9 @@ var Bar = class {
   update_handle_position() {
     if (this.invalid || this.gantt.options.readonly)
       return;
-    const bar = this.$bar;
-    this.handle_group.querySelector(".handle.left").setAttribute("x", bar.getX());
-    this.handle_group.querySelector(".handle.right").setAttribute("x", bar.getEndX());
+    const bar2 = this.$bar;
+    this.handle_group.querySelector(".handle.left").setAttribute("x", bar2.getX());
+    this.handle_group.querySelector(".handle.right").setAttribute("x", bar2.getEndX());
     const handle = this.group.querySelector(".handle.progress");
     handle && handle.setAttribute("cx", this.$bar_progress.getEndX());
   }
@@ -34452,6 +34452,70 @@ var Gantt = class {
     }).filter((t3) => t3);
     this.setup_dependencies();
   }
+  add_tasks(tasks) {
+    const __tasks = tasks.map((task, i3) => {
+      if (!task.start) {
+        console.error(
+          `task "${task.id}" doesn't have a start date`
+        );
+        return false;
+      }
+      task._start = date_utils_default.parse(task.start);
+      if (task.end === void 0 && task.duration !== void 0) {
+        task.end = task._start;
+        let durations = task.duration.split(" ");
+        durations.forEach((tmpDuration) => {
+          let { duration, scale } = date_utils_default.parse_duration(tmpDuration);
+          task.end = date_utils_default.add(task.end, duration, scale);
+        });
+      }
+      if (!task.end) {
+        console.error(`task "${task.id}" doesn't have an end date`);
+        return false;
+      }
+      task._end = date_utils_default.parse(task.end);
+      let diff = date_utils_default.diff(task._end, task._start, "year");
+      if (diff < 0) {
+        console.error(
+          `start of task can't be after end of task: in task "${task.id}"`
+        );
+        return false;
+      }
+      if (date_utils_default.diff(task._end, task._start, "year") > 10) {
+        console.error(
+          `the duration of task "${task.id}" is too long (above ten years)`
+        );
+        return false;
+      }
+      task._index = this.tasks.length + i3;
+      const task_end_values = date_utils_default.get_date_values(task._end);
+      if (task_end_values.slice(3).every((d2) => d2 === 0)) {
+        task._end = date_utils_default.add(task._end, 24, "hour");
+      }
+      if (typeof task.dependencies === "string" || !task.dependencies) {
+        let deps = [];
+        if (task.dependencies) {
+          deps = task.dependencies.split(",").map((d2) => d2.trim().replaceAll(" ", "_")).filter((d2) => d2);
+        }
+        task.dependencies = deps;
+      }
+      if (!task.id) {
+        task.id = generate_id(task);
+      } else if (typeof task.id === "string") {
+        task.id = task.id.replaceAll(" ", "_");
+      } else {
+        task.id = `${task.id}`;
+      }
+      this.bars.push(
+        new Bar(this, task)
+      );
+      this.layers.bar.appendChild(bar.group);
+      this.bars[task._index].refresh();
+      return task;
+    }).filter((t3) => t3);
+    this.tasks.push(...__tasks);
+    this.setup_dependencies();
+  }
   setup_dependencies() {
     this.dependency_map = {};
     for (let t3 of this.tasks) {
@@ -34466,10 +34530,18 @@ var Gantt = class {
     this.change_view_mode();
   }
   update_task(id, new_details) {
+    new_details.id = new_details.id.replaceAll(" ", "_");
+    if (typeof new_details.dependencies === "string" || !new_details.dependencies) {
+      let deps = [];
+      if (new_details.dependencies) {
+        deps = new_details.dependencies.split(",").map((d2) => d2.trim().replaceAll(" ", "_")).filter((d2) => d2);
+      }
+      new_details.dependencies = deps;
+    }
     let task = this.tasks.find((t3) => t3.id === id);
-    let bar = this.bars[task._index];
+    let bar2 = this.bars[task._index];
     Object.assign(task, new_details);
-    bar.refresh();
+    bar2.refresh();
   }
   change_view_mode(mode = this.options.view_mode, maintain_pos = false) {
     if (typeof mode === "string") {
@@ -34981,9 +35053,9 @@ var Gantt = class {
   }
   make_bars() {
     this.bars = this.tasks.map((task) => {
-      const bar = new Bar(this, task);
-      this.layers.bar.appendChild(bar.group);
-      return bar;
+      const bar2 = new Bar(this, task);
+      this.layers.bar.appendChild(bar2.group);
+      return bar2;
     });
   }
   make_arrows() {
@@ -35008,9 +35080,9 @@ var Gantt = class {
     }
   }
   map_arrows_on_bars() {
-    for (let bar of this.bars) {
-      bar.arrows = this.arrows.filter((arrow) => {
-        return arrow.from_task.task.id === bar.task.id || arrow.to_task.task.id === bar.task.id;
+    for (let bar2 of this.bars) {
+      bar2.arrows = this.arrows.filter((arrow) => {
+        return arrow.from_task.task.id === bar2.task.id || arrow.to_task.task.id === bar2.task.id;
       });
     }
   }
@@ -35216,8 +35288,8 @@ var Gantt = class {
       bars = ids.map((id) => this.get_bar(id));
       this.bar_being_dragged = false;
       pos = x_on_start;
-      bars.forEach((bar) => {
-        const $bar = bar.$bar;
+      bars.forEach((bar2) => {
+        const $bar = bar2.$bar;
         $bar.ox = $bar.getX();
         $bar.oy = $bar.getY();
         $bar.owidth = $bar.getWidth();
@@ -35323,8 +35395,8 @@ var Gantt = class {
       if (dx) {
         localBars = ids.map((id) => this.get_bar(id));
         if (this.options.auto_move_label) {
-          localBars.forEach((bar) => {
-            bar.update_label_position_on_horizontal_scroll({
+          localBars.forEach((bar2) => {
+            bar2.update_label_position_on_horizontal_scroll({
               x: dx,
               sx: e3.currentTarget.scrollLeft
             });
@@ -35336,29 +35408,29 @@ var Gantt = class {
       if (!action_in_progress())
         return;
       const dx = (e3.offsetX || e3.layerX) - x_on_start;
-      bars.forEach((bar) => {
-        const $bar = bar.$bar;
+      bars.forEach((bar2) => {
+        const $bar = bar2.$bar;
         $bar.finaldx = this.get_snap_position(dx, $bar.ox);
         this.hide_popup();
         if (is_resizing_left) {
-          if (parent_bar_id === bar.task.id) {
-            bar.update_bar_position({
+          if (parent_bar_id === bar2.task.id) {
+            bar2.update_bar_position({
               x: $bar.ox + $bar.finaldx,
               width: $bar.owidth - $bar.finaldx
             });
           } else {
-            bar.update_bar_position({
+            bar2.update_bar_position({
               x: $bar.ox + $bar.finaldx
             });
           }
         } else if (is_resizing_right) {
-          if (parent_bar_id === bar.task.id) {
-            bar.update_bar_position({
+          if (parent_bar_id === bar2.task.id) {
+            bar2.update_bar_position({
               width: $bar.owidth + $bar.finaldx
             });
           }
         } else if (is_dragging && !this.options.readonly && !this.options.readonly_dates) {
-          bar.update_bar_position({ x: $bar.ox + $bar.finaldx });
+          bar2.update_bar_position({ x: $bar.ox + $bar.finaldx });
         }
       });
     });
@@ -35371,13 +35443,13 @@ var Gantt = class {
     });
     $3.on(this.$svg, "mouseup", (e3) => {
       this.bar_being_dragged = null;
-      bars.forEach((bar) => {
-        const $bar = bar.$bar;
+      bars.forEach((bar2) => {
+        const $bar = bar2.$bar;
         if (!$bar.finaldx)
           return;
-        bar.date_changed();
-        bar.compute_progress();
-        bar.set_action_completed();
+        bar2.date_changed();
+        bar2.compute_progress();
+        bar2.set_action_completed();
       });
     });
     this.bind_bar_progress();
@@ -35385,7 +35457,7 @@ var Gantt = class {
   bind_bar_progress() {
     let x_on_start = 0;
     let is_resizing = null;
-    let bar = null;
+    let bar2 = null;
     let $bar_progress = null;
     let $bar = null;
     $3.on(this.$svg, "mousedown", ".handle.progress", (e3, handle) => {
@@ -35393,9 +35465,9 @@ var Gantt = class {
       x_on_start = e3.offsetX || e3.layerX;
       const $bar_wrapper = $3.closest(".bar-wrapper", handle);
       const id = $bar_wrapper.getAttribute("data-id");
-      bar = this.get_bar(id);
-      $bar_progress = bar.$bar_progress;
-      $bar = bar.$bar;
+      bar2 = this.get_bar(id);
+      $bar_progress = bar2.$bar_progress;
+      $bar = bar2.$bar;
       $bar_progress.finaldx = 0;
       $bar_progress.owidth = $bar_progress.getWidth();
       $bar_progress.min_dx = -$bar_progress.owidth;
@@ -35440,7 +35512,7 @@ var Gantt = class {
         dx = $bar_progress.min_dx;
       }
       $bar_progress.setAttribute("width", $bar_progress.owidth + dx);
-      $3.attr(bar.$handle_progress, "cx", $bar_progress.getEndX());
+      $3.attr(bar2.$handle_progress, "cx", $bar_progress.getEndX());
       $bar_progress.finaldx = dx;
     });
     $3.on(this.$svg, "mouseup", () => {
@@ -35448,9 +35520,9 @@ var Gantt = class {
       if (!($bar_progress && $bar_progress.finaldx))
         return;
       $bar_progress.finaldx = 0;
-      bar.progress_changed();
-      bar.set_action_completed();
-      bar = null;
+      bar2.progress_changed();
+      bar2.set_action_completed();
+      bar2 = null;
       $bar_progress = null;
       $bar = null;
     });
@@ -35519,8 +35591,8 @@ var Gantt = class {
     });
   }
   get_bar(id) {
-    return this.bars.find((bar) => {
-      return bar.task.id === id;
+    return this.bars.find((bar2) => {
+      return bar2.task.id === id;
     });
   }
   show_popup(opts) {
@@ -35628,30 +35700,40 @@ var _GanttView = class extends import_obsidian8.ItemView {
     this.render(htmlContainer);
     this.renderSrcCheckboxes(checkBoxContainer);
   }
-  // public onResize() {}
-  addFile(data) {
-    this.localStorage.addPage(data);
-    this.localStorage.getEvents().then(
-      (events) => {
-        events = events.filter(
-          (event) => this.isPathInActiveSrc(event.extra.path)
-        );
-        this.gantt.clear();
-        this.gantt.refresh(events);
-      }
-    );
-  }
-  changeFile(newPage, oldPage) {
-    this.localStorage.deletePage(oldPage);
-    this.localStorage.addPage(newPage);
+  addFile(page) {
+    this.localStorage.addPage(page);
+    if (!this.isPathInActiveSrc(page.file.path))
+      return;
     this.refresh();
+  }
+  async changeFile(newPage, oldPage) {
+    this.localStorage.addPage(newPage);
+    const newEvents = (await this.localStorage.getEvents()).filter(
+      (event) => this.isPathInActiveSrc(event.extra.path)
+    );
+    const mapping = /* @__PURE__ */ new Map();
+    for (let event of newEvents) {
+      mapping.set(event.extra.path, event);
+    }
+    const events = this.gantt.tasks;
+    for (let [i3, event] of events.entries()) {
+      const newEvent = mapping.get(event.extra.path);
+      if (!newEvent)
+        continue;
+      this.gantt.update_task(event.id, newEvent);
+      mapping.delete(newEvent.extra.path);
+    }
+    for (let [key, val] of mapping.entries()) {
+      this.gantt.add_tasks([val]);
+    }
   }
   renameFile(newPage, oldPage) {
-    this.changeFile(newPage, oldPage);
   }
-  deleteFile(page) {
+  async deleteFile(page) {
     this.localStorage.deletePage(page);
-    this.refresh();
+    if (!this.isPathInActiveSrc(page.file.path))
+      return;
+    await this.refresh();
   }
   reset() {
     this.onunload();
@@ -35660,11 +35742,10 @@ var _GanttView = class extends import_obsidian8.ItemView {
   onunload() {
   }
   async refresh() {
-    const events = await this.localStorage.getEvents();
-    const events_ = events.filter(
+    const events = (await this.localStorage.getEvents()).filter(
       (event) => this.isPathInActiveSrc(event.extra.path)
     );
-    this.gantt.refresh(events_);
+    this.gantt.refresh(events);
   }
   // TODO что будет, если ResetStorage
   // TODO это повторяется в CalendarView надо черех ооп делать
@@ -35730,13 +35811,28 @@ var _GanttView = class extends import_obsidian8.ItemView {
     return {
       infinite_padding: false,
       move_dependencies: false,
-      readonly: true,
+      readonly_progress: true,
+      // readonly: true,
       scroll_to: date,
-      // on_mouseup: throttled_on_date_change,
-      on_click: (event) => {
-        console.log(event);
-        this.noteManager.openNote(event.extra.path);
+      on_date_change: async (task, start, end) => {
+        start.setMinutes(
+          start.getMinutes() - start.getTimezoneOffset()
+        );
+        end.setMinutes(
+          end.getMinutes() - end.getTimezoneOffset() + 1
+          // +1 for next day
+        );
+        await this.noteManager.changePropertyFile(
+          task.extra.path,
+          (property) => {
+            property["ff_deadline"] = end.toISOString().slice(0, -14);
+            property["ff_doDays"] = Math.floor(
+              (end.getTime() - start.getTime()) / MillisecsInDay
+            );
+          }
+        );
       }
+      // on_click: (event: IEvent) => {console.log(event); this.noteManager.openNote(event.extra.path);}
     };
   }
 };
@@ -35761,41 +35857,40 @@ var Graph = class {
     return res;
   }
   addPage(page) {
-    const event = convertToEvent(page);
-    let node = this.hashTable.get(event.id);
+    const event = convertToGraphEvent(page);
+    const blockers = getBlockers(page.file.path);
+    for (let path of blockers) {
+      const blockNode = this.hashTable.get(path);
+      if (blockNode) {
+        blockNode.to.add(event.id);
+        continue;
+      }
+      const blocker = {
+        event: {
+          id: path
+        },
+        to: /* @__PURE__ */ new Set([event.id]),
+        from: /* @__PURE__ */ new Set()
+      };
+      this.hashTable.set(path, blocker);
+    }
+    const node = this.hashTable.get(event.id);
     if (node) {
       node.event = event;
-    } else {
-      node = { event, to: [], from: [] };
-      this.hashTable.set(event.id, node);
+      for (let block of blockers)
+        node.from.add(block);
+      return;
     }
-    const blockers = getBlockers(page.file.path).map(
-      (path) => {
-        const blockNode = this.hashTable.get(path);
-        if (blockNode) {
-          blockNode.to.push(node);
-          return blockNode;
-        }
-        const blocker = {
-          event: {
-            id: path
-          },
-          to: [node],
-          from: []
-        };
-        this.hashTable.set(blocker.event.id, blocker);
-        return blocker;
-      }
+    this.hashTable.set(
+      event.id,
+      { event, to: /* @__PURE__ */ new Set(), from: new Set(blockers) }
     );
-    for (let blocker of blockers) {
-      node.from.push(blocker);
-    }
   }
   deletePage(page) {
     this.hashTable.delete(page.file.path);
     for (let [key, val] of this.hashTable.entries()) {
-      val.to = val.to.filter((el) => el.event.id != page.file.path);
-      val.from = val.from.filter((el) => el.event.id != page.file.path);
+      val.to.delete(page.file.path);
+      val.from.delete(page.file.path);
     }
   }
   async calcEvents(history) {
@@ -35805,7 +35900,9 @@ var Graph = class {
       event.name = "null";
     }
     const children = await Promise.all(
-      to.map(
+      Array.from(to).map(
+        (path) => this.hashTable.get(path)
+      ).filter(Boolean).map((node) => node).map(
         async (node) => await this.calcEvents([node, ...history])
       )
     );
@@ -35850,9 +35947,9 @@ var Graph = class {
         start,
         end,
         progress,
-        dependencies: from.map((el) => (
+        dependencies: Array.from(from).map((el) => (
           // @ts-ignore
-          el.event.id.replaceAll("/", "-")
+          el.replaceAll("/", "-")
         )).join(),
         custom_class: colour,
         extra: {
@@ -35864,16 +35961,16 @@ var Graph = class {
   getRoots() {
     const roots = [];
     for (let [key, node] of this.hashTable.entries()) {
-      if (node.from.length != 0)
+      if (node.from.size != 0)
         continue;
-      if (node.to.length == 0 && !node.event.end)
+      if (node.to.size == 0 && !node.event.end)
         continue;
       roots.push(node);
     }
     return roots;
   }
 };
-function convertToEvent(page) {
+function convertToGraphEvent(page) {
   return {
     id: page.file.path,
     name: page.file.name,
