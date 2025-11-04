@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import Gantt from '../../lib/frappe-gantt/src/index'
-import { GANTT_VIEW_TYPE, GANTT_TAB_NAME, MillisecsInDay, MillisecsInMinute } from '../constants';
+import { GANTT_VIEW_TYPE, GANTT_TAB_NAME, MillisecsInDay } from '../constants';
 import {GanttSettings, IPage, ISubscriber, Src } from '../types';
 import { CalendarEventToIDate, getBlockers, getColourFromPath, getProgress, IDateToCalendarEvent, millisecToString, templateIDTick, templateNameTick, throttle, timeAdd } from '../util';
 import { Cache } from 'src/cache';
@@ -313,9 +313,14 @@ class Graph {
       res.push(...events)
     }
 
-    res.sort(
+    res
+    .sort(
+      (a, b) => a.end.getTime() - b.end.getTime()
+    )
+    .sort(
       (a, b) => a.start.getTime() - b.start.getTime()
     )
+
     return res
   }
 
@@ -378,7 +383,6 @@ class Graph {
       Array.from(to).map(
         path => this.hashTable.get(path)
       )
-      .filter(Boolean)
       .map(node => node as Node)
       .map(
         async (node) => await this.calcEvents([node, ...history])
@@ -406,7 +410,7 @@ class Graph {
     }
     else if (event.doDays) {
       colour = enumToCustomClass.ONLY_DO_DAYS
-      const [end_, isOk] = await getMinDateFromChild(children, history, this.cache, this.noteManager)
+      const [end_, isOk] = await getMinDateFromChild(children, [...history], this.cache, this.noteManager)
       if (!isOk)
         toSkip = true
 
@@ -418,7 +422,7 @@ class Graph {
     }
     else {
       colour = enumToCustomClass.NOTHING
-      const [end_, isOk] = await getMinDateFromChild(children, history, this.cache, this.noteManager)
+      const [end_, isOk] = await getMinDateFromChild(children, [...history], this.cache, this.noteManager)
       if (!isOk)
         toSkip = true
 
@@ -433,7 +437,7 @@ class Graph {
     const progress = Math.floor(tasks.done / tasks.all * 100)
 
     const result = [...children.flat()]
-    if (progress != 100 && !toSkip)
+    if (progress != 100 && !toSkip) {
       result.unshift({
         // @ts-ignore
         id: event.id.replaceAll('/', '-'),
@@ -450,6 +454,7 @@ class Graph {
           path: event.id
         }
       })
+    }
 
     return result
   }
@@ -485,24 +490,26 @@ async function calculateNextStartDate(
   cache: Cache,
   noteManager:NoteManager
 ): Promise<[Date, boolean]> {
-  let offsetDays = 0
-  let startChainDate = new Date
+  const curNode = history.shift()
+  let offsetDays = curNode?.event.doDays || DEFAULT_OFFSET_DAY
+
+  let startChainDate = new Date()
+  startChainDate.setHours(0,0,0,0)
+
   for (let [i, parent] of history.entries()) {
     const tasks = await getProgress(cache, noteManager, parent.event.id)
     if (tasks.done == tasks.all) {
-      if (i == 1)
+      if (i == 0)
         return [new Date, false]
 
       break
     }
 
-    offsetDays += parent.event.doDays || DEFAULT_OFFSET_DAY
-
-
     if (parent.event.end) {
-      startChainDate = parent.event.end
+      startChainDate = new Date(parent.event.end)
       break
     }
+    offsetDays += parent.event.doDays || DEFAULT_OFFSET_DAY
   }
 
   startChainDate.setTime(
@@ -517,7 +524,7 @@ async function getMinDateFromChild(
   cache: Cache,
   noteManager:NoteManager
 ): Promise<[Date, boolean]> {
-  const startDays = children.filter(Boolean).map(
+  const startDays = children.map(
     el => el[0]?.start
   )
   .filter(Boolean)

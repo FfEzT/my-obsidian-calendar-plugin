@@ -35852,6 +35852,8 @@ var Graph = class {
       res.push(...events);
     }
     res.sort(
+      (a3, b3) => a3.end.getTime() - b3.end.getTime()
+    ).sort(
       (a3, b3) => a3.start.getTime() - b3.start.getTime()
     );
     return res;
@@ -35902,7 +35904,7 @@ var Graph = class {
     const children = await Promise.all(
       Array.from(to).map(
         (path) => this.hashTable.get(path)
-      ).filter(Boolean).map((node) => node).map(
+      ).map((node) => node).map(
         async (node) => await this.calcEvents([node, ...history])
       ).filter(Boolean)
     );
@@ -35923,7 +35925,7 @@ var Graph = class {
       );
     } else if (event.doDays) {
       colour = enumToCustomClass.ONLY_DO_DAYS;
-      const [end_, isOk] = await getMinDateFromChild(children, history, this.cache, this.noteManager);
+      const [end_, isOk] = await getMinDateFromChild(children, [...history], this.cache, this.noteManager);
       if (!isOk)
         toSkip = true;
       end = end_;
@@ -35933,7 +35935,7 @@ var Graph = class {
       );
     } else {
       colour = enumToCustomClass.NOTHING;
-      const [end_, isOk] = await getMinDateFromChild(children, history, this.cache, this.noteManager);
+      const [end_, isOk] = await getMinDateFromChild(children, [...history], this.cache, this.noteManager);
       if (!isOk)
         toSkip = true;
       end = end_;
@@ -35945,7 +35947,7 @@ var Graph = class {
     const tasks = await getProgress(this.cache, this.noteManager, event.id);
     const progress = Math.floor(tasks.done / tasks.all * 100);
     const result = [...children.flat()];
-    if (progress != 100 && !toSkip)
+    if (progress != 100 && !toSkip) {
       result.unshift({
         // @ts-ignore
         id: event.id.replaceAll("/", "-"),
@@ -35962,6 +35964,7 @@ var Graph = class {
           path: event.id
         }
       });
+    }
     return result;
   }
   getRoots() {
@@ -35985,20 +35988,22 @@ function convertToGraphEvent(page) {
   };
 }
 async function calculateNextStartDate(history, cache, noteManager) {
-  let offsetDays = 0;
+  const curNode = history.shift();
+  let offsetDays = (curNode == null ? void 0 : curNode.event.doDays) || DEFAULT_OFFSET_DAY;
   let startChainDate = new Date();
+  startChainDate.setHours(0, 0, 0, 0);
   for (let [i3, parent] of history.entries()) {
     const tasks = await getProgress(cache, noteManager, parent.event.id);
     if (tasks.done == tasks.all) {
-      if (i3 == 1)
+      if (i3 == 0)
         return [new Date(), false];
       break;
     }
-    offsetDays += parent.event.doDays || DEFAULT_OFFSET_DAY;
     if (parent.event.end) {
-      startChainDate = parent.event.end;
+      startChainDate = new Date(parent.event.end);
       break;
     }
+    offsetDays += parent.event.doDays || DEFAULT_OFFSET_DAY;
   }
   startChainDate.setTime(
     startChainDate.getTime() + offsetDays * MillisecsInDay
@@ -36006,7 +36011,7 @@ async function calculateNextStartDate(history, cache, noteManager) {
   return [startChainDate, true];
 }
 async function getMinDateFromChild(children, history, cache, noteManager) {
-  const startDays = children.filter(Boolean).map(
+  const startDays = children.map(
     (el) => {
       var _a;
       return (_a = el[0]) == null ? void 0 : _a.start;
