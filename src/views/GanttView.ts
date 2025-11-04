@@ -383,9 +383,10 @@ class Graph {
       .map(
         async (node) => await this.calcEvents([node, ...history])
       )
+      .filter(Boolean)
     )
 
-    let start: Date, end: Date, colour: string
+    let start: Date, end: Date, colour: string, toSkip = false
     if (event.end && event.doDays) {
       colour = enumToCustomClass.FULL
       end = event.end
@@ -405,7 +406,11 @@ class Graph {
     }
     else if (event.doDays) {
       colour = enumToCustomClass.ONLY_DO_DAYS
-      end = getMinDateFromChild(children, history)
+      const [end_, isOk] = await getMinDateFromChild(children, history, this.cache, this.noteManager)
+      if (!isOk)
+        toSkip = true
+
+      end = end_
       start = new Date(end)
       start.setTime(
         end.getTime() - event.doDays*MillisecsInDay
@@ -413,7 +418,11 @@ class Graph {
     }
     else {
       colour = enumToCustomClass.NOTHING
-      end = getMinDateFromChild(children, history)
+      const [end_, isOk] = await getMinDateFromChild(children, history, this.cache, this.noteManager)
+      if (!isOk)
+        toSkip = true
+
+      end = end_
       start = new Date(end)
       start.setTime(
         end.getTime() - DEFAULT_OFFSET_DAY*MillisecsInDay
@@ -424,7 +433,7 @@ class Graph {
     const progress = Math.floor(tasks.done / tasks.all * 100)
 
     const result = [...children.flat()]
-    if (progress != 100)
+    if (progress != 100 && !toSkip)
       result.unshift({
         // @ts-ignore
         id: event.id.replaceAll('/', '-'),
@@ -471,27 +480,50 @@ function convertToGraphEvent(page: IPage): GraphEvent {
 
 }
 
-function getMinDateFromChild(children: IEvent[][], history: Node[]): Date {
-  const startDays = children.filter(Boolean).map(
-    el => el[0].start
-  )
+async function calculateNextStartDate(
+  history: Node[],
+  cache: Cache,
+  noteManager:NoteManager
+): Promise<[Date, boolean]> {
+  let offsetDays = 0
+  let startChainDate = new Date
+  for (let [i, parent] of history.entries()) {
+    const tasks = await getProgress(cache, noteManager, parent.event.id)
+    if (tasks.done == tasks.all) {
+      if (i == 1)
+        return [new Date, false]
 
-  if (startDays.length == 0) {
-    let offsetDays = 0
-    let startChainDate = new Date
-    for (let parent of history) {
-      offsetDays += parent.event.doDays || DEFAULT_OFFSET_DAY
-
-      if (parent.event.end) {
-        startChainDate = parent.event.end
-        break
-      }
+      break
     }
 
-    startChainDate.setTime(
-      startChainDate.getTime() + offsetDays*MillisecsInDay
-    )
-    return startChainDate
+    offsetDays += parent.event.doDays || DEFAULT_OFFSET_DAY
+
+
+    if (parent.event.end) {
+      startChainDate = parent.event.end
+      break
+    }
+  }
+
+  startChainDate.setTime(
+    startChainDate.getTime() + offsetDays*MillisecsInDay
+  )
+  return [startChainDate, true]
+}
+
+async function getMinDateFromChild(
+  children: IEvent[][],
+  history: Node[],
+  cache: Cache,
+  noteManager:NoteManager
+): Promise<[Date, boolean]> {
+  const startDays = children.filter(Boolean).map(
+    el => el[0]?.start
+  )
+  .filter(Boolean)
+
+  if (startDays.length == 0) {
+    return await calculateNextStartDate(history, cache, noteManager)
   }
 
   const minDate = startDays.reduce(
@@ -503,5 +535,5 @@ function getMinDateFromChild(children: IEvent[][], history: Node[]): Date {
     startDays[0]
   )
 
-  return minDate
+  return [minDate, true]
 }
