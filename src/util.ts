@@ -19,6 +19,7 @@ import NoteManager from "./NoteManager";
 
 const SLEEP_TIME = 1000 // ms
 
+// TODO мб getAPI(plugin.app)
 export const dv = getAPI() as DataviewApi
 
 function getLinkClass(path: string) {
