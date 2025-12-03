@@ -35846,10 +35846,16 @@ var Graph = class {
   }
   async getEvents() {
     const roots = this.getRoots();
+    const resSet = /* @__PURE__ */ new Set();
     const res = [];
     for (let node of roots) {
       const events = await this.calcEvents([node]);
-      res.push(...events);
+      for (let event of events) {
+        if (resSet.has(event.id))
+          continue;
+        res.push(event);
+        resSet.add(event.id);
+      }
     }
     res.sort(
       (a3, b3) => a3.end.getTime() - b3.end.getTime()

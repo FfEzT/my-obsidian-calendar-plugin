@@ -1,7 +1,7 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import Gantt from '../../lib/frappe-gantt/src/index'
 import { GANTT_VIEW_TYPE, GANTT_TAB_NAME, MillisecsInDay } from '../constants';
-import {GanttSettings, IPage, ISubscriber, Src } from '../types';
+import { GanttSettings, IPage, ISubscriber, Src } from '../types';
 import { CalendarEventToIDate, getBlockers, getColourFromPath, getProgress, IDateToCalendarEvent, millisecToString, templateIDTick, templateNameTick, throttle, timeAdd } from '../util';
 import { Cache } from 'src/cache';
 import NoteManager from 'src/NoteManager';
@@ -46,9 +46,6 @@ export class GanttView extends ItemView implements ISubscriber {
 
   private noteManager: NoteManager
 
-  // TODO зачем?
-  // private ganttSettings: GanttSettings
-
   private localStorage: Graph
 
   private gantt: Gantt
@@ -67,7 +64,6 @@ export class GanttView extends ItemView implements ISubscriber {
     this.idForCache = idForCache
     this.eventSrc = eventSrc
     this.noteManager = noteManager
-    // this.ganttSettings = ganttSettings
 
     this.localStorage = new Graph(cache, noteManager)
 
@@ -76,9 +72,9 @@ export class GanttView extends ItemView implements ISubscriber {
     }
   }
 
-  public getViewType() {return GANTT_VIEW_TYPE}
+  public getViewType() { return GANTT_VIEW_TYPE }
 
-  public getDisplayText() {return GANTT_TAB_NAME}
+  public getDisplayText() { return GANTT_TAB_NAME }
 
   public async onOpen() {
     const { containerEl } = this
@@ -106,9 +102,9 @@ export class GanttView extends ItemView implements ISubscriber {
   public async changeFile(newPage: IPage, oldPage: IPage) {
     this.localStorage.addPage(newPage)
     const newEvents = (await this.localStorage.getEvents())
-    .filter(
-      event => this.isPathInActiveSrc(event.extra.path)
-    )
+      .filter(
+        event => this.isPathInActiveSrc(event.extra.path)
+      )
 
     const mapping: Map<string, IEvent> = new Map()
     for (let event of newEvents) {
@@ -158,9 +154,9 @@ export class GanttView extends ItemView implements ISubscriber {
 
   private async refresh() {
     const events = (await this.localStorage.getEvents())
-    .filter(
-      event => this.isPathInActiveSrc(event.extra.path)
-    )
+      .filter(
+        event => this.isPathInActiveSrc(event.extra.path)
+      )
     this.gantt.refresh(events)
   }
 
@@ -173,7 +169,7 @@ export class GanttView extends ItemView implements ISubscriber {
     srcCheckboxContainer.addClass("src-checkboxes")
 
     for (let src of this.eventSrc) {
-      const checkboxContainer = srcCheckboxContainer!.createDiv({cls: 'src-checkbox-item'})
+      const checkboxContainer = srcCheckboxContainer!.createDiv({ cls: 'src-checkbox-item' })
 
       const checkbox = checkboxContainer.createEl('input', {
         type: 'checkbox',
@@ -194,7 +190,7 @@ export class GanttView extends ItemView implements ISubscriber {
 
       checkboxContainer.createEl('label', {
         text: src.path,
-        attr: {for: `src-checkbox-${src.path}`}
+        attr: { for: `src-checkbox-${src.path}` }
       })
     }
   }
@@ -220,7 +216,7 @@ export class GanttView extends ItemView implements ISubscriber {
     return this.selectedSrcPaths.has(src.path)
   }
 
-  private async render(container: Element)  {
+  private async render(container: Element) {
     container.id = GanttView.CONTAINER_ID
 
     const subscribedData = await this.cache.subscribe(this.idForCache, this.eventSrc, this)
@@ -241,7 +237,7 @@ export class GanttView extends ItemView implements ISubscriber {
 
   private getGanttSettings() {
     const date = new Date
-    date.setTime(date.getTime() - 7*MillisecsInDay)
+    date.setTime(date.getTime() - 7 * MillisecsInDay)
 
     // TODO смена тем
     // TODO перенести либу ганта себе в репо + пропатчить css-стили
@@ -265,7 +261,7 @@ export class GanttView extends ItemView implements ISubscriber {
         await this.noteManager.changePropertyFile(
           task.extra.path,
           property => {
-            property['ff_deadline'] = end.toISOString().slice(0,-14)
+            property['ff_deadline'] = end.toISOString().slice(0, -14)
             property['ff_doDays'] = Math.floor(
               (end.getTime() - start.getTime()) / MillisecsInDay
             )
@@ -306,20 +302,27 @@ class Graph {
   public async getEvents(): Promise<IEvent[]> {
     const roots = this.getRoots()
 
+    const resSet = new Set<string>()
     const res: IEvent[] = []
-
     for (let node of roots) {
       const events = await this.calcEvents([node])
-      res.push(...events)
+
+      for (let event of events) {
+        if (resSet.has(event.id))
+          continue
+
+        res.push(event)
+        resSet.add(event.id)
+      }
     }
 
     res
-    .sort(
-      (a, b) => a.end.getTime() - b.end.getTime()
-    )
-    .sort(
-      (a, b) => a.start.getTime() - b.start.getTime()
-    )
+      .sort(
+        (a, b) => a.end.getTime() - b.end.getTime()
+      )
+      .sort(
+        (a, b) => a.start.getTime() - b.start.getTime()
+      )
 
     return res
   }
@@ -383,11 +386,11 @@ class Graph {
       Array.from(to).map(
         path => this.hashTable.get(path)
       )
-      .map(node => node as Node)
-      .map(
-        async (node) => await this.calcEvents([node, ...history])
-      )
-      .filter(Boolean)
+        .map(node => node as Node)
+        .map(
+          async (node) => await this.calcEvents([node, ...history])
+        )
+        .filter(Boolean)
     )
 
     let start: Date, end: Date, colour: string, toSkip = false
@@ -397,7 +400,7 @@ class Graph {
 
       start = new Date(end)
       start.setTime(
-        end.getTime() - event.doDays*MillisecsInDay
+        end.getTime() - event.doDays * MillisecsInDay
       )
     }
     else if (event.end) {
@@ -405,7 +408,7 @@ class Graph {
       end = event.end
       start = new Date(event.end)
       start.setTime(
-        start.getTime() - DEFAULT_OFFSET_DAY*MillisecsInDay
+        start.getTime() - DEFAULT_OFFSET_DAY * MillisecsInDay
       )
     }
     else if (event.doDays) {
@@ -417,7 +420,7 @@ class Graph {
       end = end_
       start = new Date(end)
       start.setTime(
-        end.getTime() - event.doDays*MillisecsInDay
+        end.getTime() - event.doDays * MillisecsInDay
       )
     }
     else {
@@ -429,7 +432,7 @@ class Graph {
       end = end_
       start = new Date(end)
       start.setTime(
-        end.getTime() - DEFAULT_OFFSET_DAY*MillisecsInDay
+        end.getTime() - DEFAULT_OFFSET_DAY * MillisecsInDay
       )
     }
 
@@ -488,13 +491,13 @@ function convertToGraphEvent(page: IPage): GraphEvent {
 async function calculateNextStartDate(
   history: Node[],
   cache: Cache,
-  noteManager:NoteManager
+  noteManager: NoteManager
 ): Promise<[Date, boolean]> {
   const curNode = history.shift()
   let offsetDays = curNode?.event.doDays || DEFAULT_OFFSET_DAY
 
   let startChainDate = new Date()
-  startChainDate.setHours(0,0,0,0)
+  startChainDate.setHours(0, 0, 0, 0)
 
   for (let [i, parent] of history.entries()) {
     const tasks = await getProgress(cache, noteManager, parent.event.id)
@@ -513,7 +516,7 @@ async function calculateNextStartDate(
   }
 
   startChainDate.setTime(
-    startChainDate.getTime() + offsetDays*MillisecsInDay
+    startChainDate.getTime() + offsetDays * MillisecsInDay
   )
   return [startChainDate, true]
 }
@@ -522,12 +525,12 @@ async function getMinDateFromChild(
   children: IEvent[][],
   history: Node[],
   cache: Cache,
-  noteManager:NoteManager
+  noteManager: NoteManager
 ): Promise<[Date, boolean]> {
   const startDays = children.map(
     el => el[0]?.start
   )
-  .filter(Boolean)
+    .filter(Boolean)
 
   if (startDays.length == 0) {
     return await calculateNextStartDate(history, cache, noteManager)
