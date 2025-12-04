@@ -14757,6 +14757,8 @@ function pathToFileWithoutFileName(path) {
 }
 function IDateToCalendarEvent(args) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+  if (!args.ff_date)
+    return;
   const structure = {
     start: new Date(args.ff_date),
     allDay: false
@@ -14812,7 +14814,7 @@ function CalendarEventToIDate(event) {
   return result;
 }
 function getTicksFromText(text) {
-  var _a, _b, _c, _d, _e;
+  var _a, _b, _c, _d, _e, _f;
   const result = [];
   const regExpTicks = /\[t::.+\]/gm;
   const matches = text.match(regExpTicks);
@@ -14822,10 +14824,10 @@ function getTicksFromText(text) {
       if (!args)
         continue;
       const name = (_a = args[0]) == null ? void 0 : _a.trim();
-      const ff_date = dv.date((_b = args[1]) == null ? void 0 : _b.trim());
-      const ff_timeStart = dv.duration((_c = args[2]) == null ? void 0 : _c.trim());
-      const tempDuration = (_d = args[3]) == null ? void 0 : _d.trim();
-      const ff_duration = dv.duration((_e = args[3]) == null ? void 0 : _e.trim());
+      const ff_date = (_c = dv.date((_b = args[1]) == null ? void 0 : _b.trim())) == null ? void 0 : _c.toJSDate();
+      const ff_timeStart = dv.duration((_d = args[2]) == null ? void 0 : _d.trim());
+      const tempDuration = (_e = args[3]) == null ? void 0 : _e.trim();
+      const ff_duration = dv.duration((_f = args[3]) == null ? void 0 : _f.trim());
       if (name == "")
         continue;
       result.push(
@@ -31997,7 +31999,7 @@ var CalendarView = class extends import_obsidian.ItemView {
       const checkbox = checkboxContainer.createEl("input", {
         type: "checkbox",
         attr: {
-          id: `src-checkbox-${src.path}`,
+          id: `src-checkbox-calendar-${src.path}`,
           checked: this.selectedSrcPaths.has(src.path) ? "checked" : null
         }
       });
@@ -32011,7 +32013,7 @@ var CalendarView = class extends import_obsidian.ItemView {
       });
       checkboxContainer.createEl("label", {
         text: src.path,
-        attr: { for: `src-checkbox-${src.path}` }
+        attr: { for: `src-checkbox-calendar-${src.path}` }
       });
     }
   }
@@ -32059,11 +32061,14 @@ var CalendarView = class extends import_obsidian.ItemView {
       editable: true
     };
     if (page.ff_date) {
+      const event = IDateToCalendarEvent(page);
+      if (!event)
+        throw "unreachable";
       const structure = {
         ...structureTemplate,
         id: page.file.path,
         title: page.file.name,
-        ...IDateToCalendarEvent(page)
+        ...event
       };
       if (page.ff_frequency)
         structure.borderColor = colours.frequency;
@@ -32074,6 +32079,10 @@ var CalendarView = class extends import_obsidian.ItemView {
       result.push(structure);
     }
     for (let tick of page.ticks) {
+      const event = IDateToCalendarEvent(tick);
+      console.log(event);
+      if (!event)
+        continue;
       const structure = {
         ...structureTemplate,
         id: templateIDTick(page.file.path, tick.name),
@@ -32083,7 +32092,7 @@ var CalendarView = class extends import_obsidian.ItemView {
           tickName: tick.name,
           notePath: page.file.path
         },
-        ...IDateToCalendarEvent(tick)
+        ...event
       };
       result.push(structure);
     }
@@ -32183,7 +32192,8 @@ var CalendarView = class extends import_obsidian.ItemView {
           this.noteManager.changePropertyFile(
             newPos.id,
             (property) => {
-              property["ff_date"] = newProp["ff_date"].toISOString().slice(0, -14);
+              var _a2;
+              property["ff_date"] = (_a2 = newProp["ff_date"]) == null ? void 0 : _a2.toISOString().slice(0, -14);
               property["ff_timeStart"] = newProp["ff_timeStart"];
               property["ff_duration"] = newProp["ff_duration"];
             }
@@ -32204,8 +32214,9 @@ var CalendarView = class extends import_obsidian.ItemView {
                 () => this.noteManager.changePropertyFile(
                   pathOfFile,
                   (property) => {
+                    var _a;
                     const newProp = CalendarEventToIDate({ start, end, allDay });
-                    property["ff_date"] = newProp["ff_date"].toISOString().slice(0, -14);
+                    property["ff_date"] = (_a = newProp["ff_date"]) == null ? void 0 : _a.toISOString().slice(0, -14);
                     property["ff_timeStart"] = newProp["ff_timeStart"];
                     property["ff_duration"] = newProp["ff_duration"];
                   }
@@ -32906,10 +32917,11 @@ var NoteManager = class {
     );
   }
   async changeTickFile(path, tickname, event) {
+    var _a;
     const tFile = this.metadataCache.getFirstLinkpathDest(path, "");
     const text = await this.vault.read(tFile);
     const regExp = new RegExp(`\\[t::\\s*${tickname}(,[^\\]]*|)\\]`, "gm");
-    const date = event["ff_date"].toISOString().slice(0, -14);
+    const date = (_a = event["ff_date"]) == null ? void 0 : _a.toISOString().slice(0, -14);
     const newString = `[t::${tickname},${date},${event["ff_timeStart"]},${event["ff_duration"]}]`;
     await this.vault.modify(
       tFile,
@@ -32922,7 +32934,7 @@ var NoteManager = class {
     tFile && leaf.openFile(tFile);
   }
   async getPage(file) {
-    var _a;
+    var _a, _b, _c;
     const result = {
       file: {
         path: file.path,
@@ -32930,10 +32942,7 @@ var NoteManager = class {
       },
       ticks: getTicksFromText(await this.vault.cachedRead(file)),
       ff_duration: "",
-      ff_timeStart: "",
-      // TODO из-за того, что не все заметки имеют ff_date, он должен возвращать null, но это bad practice
-      //@ts-ignore
-      ff_date: null
+      ff_timeStart: ""
     };
     const property = (_a = this.metadataCache.getFileCache(file)) == null ? void 0 : _a.frontmatter;
     if (!property) {
@@ -32942,11 +32951,9 @@ var NoteManager = class {
     const added = {
       ff_duration: dv.duration(property.ff_duration),
       ff_timeStart: dv.duration(property.ff_timeStart),
-      ff_date: dv.date(property.ff_date),
-      ff_deadline: void 0
+      ff_date: (_b = dv.date(property.ff_date)) == null ? void 0 : _b.toJSDate(),
+      ff_deadline: (_c = dv.date(property.ff_deadline)) == null ? void 0 : _c.toJSDate()
     };
-    if (property.ff_deadline)
-      added.ff_deadline = new Date(property.ff_deadline);
     return {
       ...result,
       ...property,
@@ -35665,7 +35672,7 @@ var enumToCustomClass = {
   FULL: "full",
   ONLY_DEADLINE: "only-deadline",
   // TODO gradient document
-  ONLY_DO_DAYS: "only-do-days",
+  ONLY_START: "only-do-days",
   // TODO orange document
   NOTHING: "nothing"
   // TODO red document
@@ -35757,7 +35764,7 @@ var _GanttView = class extends import_obsidian8.ItemView {
       const checkbox = checkboxContainer.createEl("input", {
         type: "checkbox",
         attr: {
-          id: `src-checkbox-${src.path}`,
+          id: `src-checkbox-gantt-${src.path}`,
           checked: this.selectedSrcPaths.has(src.path) ? "checked" : null
         }
       });
@@ -35771,7 +35778,7 @@ var _GanttView = class extends import_obsidian8.ItemView {
       });
       checkboxContainer.createEl("label", {
         text: src.path,
-        attr: { for: `src-checkbox-${src.path}` }
+        attr: { for: `src-checkbox-gantt-${src.path}` }
       });
     }
   }
@@ -35825,10 +35832,8 @@ var _GanttView = class extends import_obsidian8.ItemView {
         await this.noteManager.changePropertyFile(
           task.extra.path,
           (property) => {
+            property["ff_date"] = start.toISOString().slice(0, -14);
             property["ff_deadline"] = end.toISOString().slice(0, -14);
-            property["ff_doDays"] = Math.floor(
-              (end.getTime() - start.getTime()) / MillisecsInDay
-            );
           }
         );
       }
@@ -35908,20 +35913,23 @@ var Graph = class {
       event.name = "null";
     }
     const children = await Promise.all(
-      Array.from(to).map(
-        (path) => this.hashTable.get(path)
-      ).map((node) => node).map(
+      Array.from(to).map((path) => this.hashTable.get(path)).map((node) => node).map(
         async (node) => await this.calcEvents([node, ...history])
       ).filter(Boolean)
     );
     let start, end, colour, toSkip = false;
-    if (event.end && event.doDays) {
-      colour = enumToCustomClass.FULL;
+    if (event.end && event.start) {
       end = event.end;
-      start = new Date(end);
-      start.setTime(
-        end.getTime() - event.doDays * MillisecsInDay
-      );
+      if (event.start < event.end) {
+        colour = enumToCustomClass.FULL;
+        start = event.start;
+      } else {
+        colour = enumToCustomClass.ONLY_DEADLINE;
+        start = new Date(end);
+        start.setTime(
+          end.getTime() - MillisecsInDay
+        );
+      }
     } else if (event.end) {
       colour = enumToCustomClass.ONLY_DEADLINE;
       end = event.end;
@@ -35929,15 +35937,12 @@ var Graph = class {
       start.setTime(
         start.getTime() - DEFAULT_OFFSET_DAY * MillisecsInDay
       );
-    } else if (event.doDays) {
-      colour = enumToCustomClass.ONLY_DO_DAYS;
-      const [end_, isOk] = await getMinDateFromChild(children, [...history], this.cache, this.noteManager);
-      if (!isOk)
-        toSkip = true;
-      end = end_;
-      start = new Date(end);
-      start.setTime(
-        end.getTime() - event.doDays * MillisecsInDay
+    } else if (event.start) {
+      colour = enumToCustomClass.ONLY_START;
+      start = event.start;
+      end = new Date(start);
+      end.setTime(
+        end.getTime() + DEFAULT_OFFSET_DAY * MillisecsInDay
       );
     } else {
       colour = enumToCustomClass.NOTHING;
@@ -35989,13 +35994,13 @@ function convertToGraphEvent(page) {
   return {
     id: page.file.path,
     name: page.file.name,
-    doDays: page.ff_doDays,
+    start: page.ff_date,
     end: page.ff_deadline
   };
 }
 async function calculateNextStartDate(history, cache, noteManager) {
   const curNode = history.shift();
-  let offsetDays = (curNode == null ? void 0 : curNode.event.doDays) || DEFAULT_OFFSET_DAY;
+  let offsetDays = DEFAULT_OFFSET_DAY;
   let startChainDate = new Date();
   startChainDate.setHours(0, 0, 0, 0);
   for (let [i3, parent] of history.entries()) {
@@ -36009,7 +36014,11 @@ async function calculateNextStartDate(history, cache, noteManager) {
       startChainDate = new Date(parent.event.end);
       break;
     }
-    offsetDays += parent.event.doDays || DEFAULT_OFFSET_DAY;
+    offsetDays += DEFAULT_OFFSET_DAY;
+    if (parent.event.start) {
+      startChainDate = new Date(parent.event.start);
+      break;
+    }
   }
   startChainDate.setTime(
     startChainDate.getTime() + offsetDays * MillisecsInDay

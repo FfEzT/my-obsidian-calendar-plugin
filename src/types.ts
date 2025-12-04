@@ -117,7 +117,7 @@ export type PluginSettings = {
 
 export interface IDate {
   // TODO date может и не быть (см. fileManager.ts/getPage)
-  ff_date: Date
+  ff_date?: Date
   ff_timeStart: DURATION_TYPES
   ff_duration: DURATION_TYPES
 }
@@ -136,9 +136,7 @@ export interface IPage extends IDate {
   // TODO все названия этих полей брать из настроек
   ff_frequency?: string
   ff_status?: string,
-  ff_dateStart?: Date,
   ff_deadline?: Date,
-  ff_doDays: number
 }
 
 export interface CalendarEvent {

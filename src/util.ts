@@ -38,7 +38,10 @@ function pathToFileWithoutFileName(path: string) {
 }
 
 // TODO в calendar переводить?
-export function IDateToCalendarEvent(args: IDate): CalendarEvent {
+export function IDateToCalendarEvent(args: IDate): CalendarEvent|undefined {
+  if (!args.ff_date)
+    return
+
   const structure: CalendarEvent = {
     start: new Date(args.ff_date),
     allDay: false,
@@ -127,7 +130,7 @@ export function getTicksFromText(text: string): ITick[] {
       continue
 
     const name = args[0]?.trim()
-    const ff_date = dv.date(args[1]?.trim())
+    const ff_date = dv.date(args[1]?.trim())?.toJSDate()
     const ff_timeStart = dv.duration(args[2]?.trim())
 
     const tempDuration = args[3]?.trim()

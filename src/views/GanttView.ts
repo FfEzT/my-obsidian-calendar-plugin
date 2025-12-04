@@ -2,7 +2,7 @@ import { ItemView, WorkspaceLeaf } from 'obsidian';
 import Gantt from '../../lib/frappe-gantt/src/index'
 import { GANTT_VIEW_TYPE, GANTT_TAB_NAME, MillisecsInDay } from '../constants';
 import { GanttSettings, IPage, ISubscriber, Src } from '../types';
-import { CalendarEventToIDate, getBlockers, getColourFromPath, getProgress, IDateToCalendarEvent, millisecToString, templateIDTick, templateNameTick, throttle, timeAdd } from '../util';
+import { CalendarEventToIDate, getBlockers, getColourFromPath, getProgress } from '../util';
 import { Cache } from 'src/cache';
 import NoteManager from 'src/NoteManager';
 
@@ -16,7 +16,7 @@ const DEFAULT_OFFSET_DAY = 14 // TODO 7 is constant
 const enumToCustomClass = {
   FULL: "full",
   ONLY_DEADLINE: 'only-deadline', // TODO gradient document
-  ONLY_DO_DAYS: 'only-do-days', // TODO orange document
+  ONLY_START: 'only-do-days', // TODO orange document
   NOTHING: 'nothing' // TODO red document
 }
 
@@ -174,7 +174,7 @@ export class GanttView extends ItemView implements ISubscriber {
       const checkbox = checkboxContainer.createEl('input', {
         type: 'checkbox',
         attr: {
-          id: `src-checkbox-${src.path}`,
+          id: `src-checkbox-gantt-${src.path}`,
           checked: this.selectedSrcPaths.has(src.path) ? 'checked' : null
         }
       })
@@ -190,7 +190,7 @@ export class GanttView extends ItemView implements ISubscriber {
 
       checkboxContainer.createEl('label', {
         text: src.path,
-        attr: { for: `src-checkbox-${src.path}` }
+        attr: { for: `src-checkbox-gantt-${src.path}` }
       })
     }
   }
@@ -261,10 +261,8 @@ export class GanttView extends ItemView implements ISubscriber {
         await this.noteManager.changePropertyFile(
           task.extra.path,
           property => {
+            property['ff_date'] = start.toISOString().slice(0, -14)
             property['ff_deadline'] = end.toISOString().slice(0, -14)
-            property['ff_doDays'] = Math.floor(
-              (end.getTime() - start.getTime()) / MillisecsInDay
-            )
           }
         )
       },
@@ -277,12 +275,12 @@ export class GanttView extends ItemView implements ISubscriber {
 type GraphEvent = {
   id: string
   name?: string,
-  doDays?: number,
+  start?: Date,
   end?: Date,
 }
 
 type Node = {
-  to: Set<string> // path
+  to: Set<string> // paths
   from: Set<string>
   event: GraphEvent
 }
@@ -383,9 +381,8 @@ class Graph {
     }
 
     const children: IEvent[][] = await Promise.all(
-      Array.from(to).map(
-        path => this.hashTable.get(path)
-      )
+      Array.from(to)
+        .map(path => this.hashTable.get(path))
         .map(node => node as Node)
         .map(
           async (node) => await this.calcEvents([node, ...history])
@@ -394,14 +391,19 @@ class Graph {
     )
 
     let start: Date, end: Date, colour: string, toSkip = false
-    if (event.end && event.doDays) {
-      colour = enumToCustomClass.FULL
+    if (event.end && event.start) {
       end = event.end
-
-      start = new Date(end)
-      start.setTime(
-        end.getTime() - event.doDays * MillisecsInDay
-      )
+      if (event.start < event.end) {
+        colour = enumToCustomClass.FULL
+        start = event.start
+      }
+      else {
+        colour = enumToCustomClass.ONLY_DEADLINE
+        start = new Date(end)
+        start.setTime(
+          end.getTime() - MillisecsInDay
+        )
+      }
     }
     else if (event.end) {
       colour = enumToCustomClass.ONLY_DEADLINE
@@ -411,16 +413,12 @@ class Graph {
         start.getTime() - DEFAULT_OFFSET_DAY * MillisecsInDay
       )
     }
-    else if (event.doDays) {
-      colour = enumToCustomClass.ONLY_DO_DAYS
-      const [end_, isOk] = await getMinDateFromChild(children, [...history], this.cache, this.noteManager)
-      if (!isOk)
-        toSkip = true
-
-      end = end_
-      start = new Date(end)
-      start.setTime(
-        end.getTime() - event.doDays * MillisecsInDay
+    else if (event.start) {
+      colour = enumToCustomClass.ONLY_START
+      start = event.start
+      end = new Date(start)
+      end.setTime(
+        end.getTime() + DEFAULT_OFFSET_DAY * MillisecsInDay
       )
     }
     else {
@@ -482,7 +480,7 @@ function convertToGraphEvent(page: IPage): GraphEvent {
   return {
     id: page.file.path,
     name: page.file.name,
-    doDays: page.ff_doDays,
+    start: page.ff_date,
     end: page.ff_deadline
   }
 
@@ -492,9 +490,10 @@ async function calculateNextStartDate(
   history: Node[],
   cache: Cache,
   noteManager: NoteManager
-): Promise<[Date, boolean]> {
+): Promise<[Date, boolean]>
+{
   const curNode = history.shift()
-  let offsetDays = curNode?.event.doDays || DEFAULT_OFFSET_DAY
+  let offsetDays = DEFAULT_OFFSET_DAY
 
   let startChainDate = new Date()
   startChainDate.setHours(0, 0, 0, 0)
@@ -512,7 +511,12 @@ async function calculateNextStartDate(
       startChainDate = new Date(parent.event.end)
       break
     }
-    offsetDays += parent.event.doDays || DEFAULT_OFFSET_DAY
+
+    offsetDays += DEFAULT_OFFSET_DAY
+    if (parent.event.start) {
+      startChainDate = new Date(parent.event.start)
+      break
+    }
   }
 
   startChainDate.setTime(
@@ -526,10 +530,12 @@ async function getMinDateFromChild(
   history: Node[],
   cache: Cache,
   noteManager: NoteManager
-): Promise<[Date, boolean]> {
-  const startDays = children.map(
-    el => el[0]?.start
-  )
+): Promise<[Date, boolean]>
+{
+  const startDays = children
+    .map(
+      el => el[0]?.start
+    )
     .filter(Boolean)
 
   if (startDays.length == 0) {

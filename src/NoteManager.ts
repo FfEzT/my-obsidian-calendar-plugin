@@ -54,7 +54,7 @@ export default class NoteManager {
     const text = await this.vault.read(tFile)
     const regExp = new RegExp(`\\[t::\\s*${tickname}(,[^\\]]*|)\\]`, "gm")
 
-    const date = event["ff_date"].toISOString().slice(0,-14)
+    const date = event["ff_date"]?.toISOString().slice(0,-14)
     const newString = `[t::${tickname},${date},${event["ff_timeStart"]},${event['ff_duration']}]`
 
     await this.vault.modify(
@@ -80,11 +80,7 @@ export default class NoteManager {
       },
       ticks: getTicksFromText(await this.vault.cachedRead(file)),
       ff_duration: "",
-      ff_timeStart: "",
-
-      // TODO из-за того, что не все заметки имеют ff_date, он должен возвращать null, но это bad practice
-      //@ts-ignore
-      ff_date: null,
+      ff_timeStart: ""
     }
 
     const property = this.metadataCache.getFileCache(file)?.frontmatter
@@ -97,11 +93,9 @@ export default class NoteManager {
     const added = {
       ff_duration: dv.duration(property.ff_duration),
       ff_timeStart: dv.duration(property.ff_timeStart),
-      ff_date: dv.date(property.ff_date),
-      ff_deadline: undefined as Date|undefined
+      ff_date: dv.date(property.ff_date)?.toJSDate(),
+      ff_deadline: dv.date(property.ff_deadline)?.toJSDate()
     }
-    if (property.ff_deadline)
-      added.ff_deadline = new Date(property.ff_deadline)
 
     return {
       ...result,

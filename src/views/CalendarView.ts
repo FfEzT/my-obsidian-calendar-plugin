@@ -157,7 +157,7 @@ export class CalendarView extends ItemView implements ISubscriber {
       const checkbox = checkboxContainer.createEl('input', {
         type: 'checkbox',
         attr: {
-          id: `src-checkbox-${src.path}`,
+          id: `src-checkbox-calendar-${src.path}`,
           checked: this.selectedSrcPaths.has(src.path) ? 'checked' : null
         }
       })
@@ -173,7 +173,7 @@ export class CalendarView extends ItemView implements ISubscriber {
 
       checkboxContainer.createEl('label', {
         text: src.path,
-        attr: {for: `src-checkbox-${src.path}`}
+        attr: {for: `src-checkbox-calendar-${src.path}`}
       })
     }
   }
@@ -237,11 +237,15 @@ export class CalendarView extends ItemView implements ISubscriber {
     }
 
     if (page.ff_date) {
+      const event = IDateToCalendarEvent(page)
+      if (!event)
+        throw "unreachable"
+
       const structure: IEvent = {
         ...structureTemplate,
         id: page.file.path,
         title: page.file.name,
-        ...IDateToCalendarEvent(page)
+        ...event
       }
       if (page.ff_frequency)
         structure.borderColor = colours.frequency
@@ -253,6 +257,11 @@ export class CalendarView extends ItemView implements ISubscriber {
       result.push(structure)
     }
     for (let tick of page.ticks) {
+      const event = IDateToCalendarEvent(tick)
+      console.log(event)
+      if (!event)
+        continue
+
       const structure: IEvent = {
         ...structureTemplate,
         id: templateIDTick(page.file.path, tick.name),
@@ -262,7 +271,7 @@ export class CalendarView extends ItemView implements ISubscriber {
           tickName: tick.name,
           notePath: page.file.path
         },
-        ...IDateToCalendarEvent(tick)
+        ...event
       }
       result.push(structure)
     }
@@ -381,7 +390,7 @@ export class CalendarView extends ItemView implements ISubscriber {
           this.noteManager.changePropertyFile(
             newPos.id,
             property => {
-              property['ff_date']      = newProp['ff_date'].toISOString().slice(0,-14)
+              property['ff_date']      = newProp['ff_date']?.toISOString().slice(0,-14)
               property['ff_timeStart'] = newProp['ff_timeStart']
               property['ff_duration']  = newProp['ff_duration']
             }
@@ -407,7 +416,7 @@ export class CalendarView extends ItemView implements ISubscriber {
                   property => {
                     const newProp = CalendarEventToIDate({start, end, allDay})
 
-                    property['ff_date']      = newProp['ff_date'].toISOString().slice(0,-14)
+                    property['ff_date']      = newProp['ff_date']?.toISOString().slice(0,-14)
                     property['ff_timeStart'] = newProp['ff_timeStart']
                     property['ff_duration']  = newProp['ff_duration']
                   }

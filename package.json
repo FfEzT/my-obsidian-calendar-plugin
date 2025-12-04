@@ -12,6 +12,7 @@
 	"author": "",
 	"license": "MIT",
 	"devDependencies": {
+		"@types/luxon": "^3.7.1",
 		"@types/node": "^16.11.6",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
@@ -32,6 +33,7 @@
 		"@fullcalendar/rrule": "^6.1.15",
 		"@fullcalendar/timegrid": "^6.1.15",
 		"frappe-gantt": "^1.0.4",
+		"luxon": "^3.7.2",
 		"obsidian-dataview": "^0.5.67"
 	}
 }
