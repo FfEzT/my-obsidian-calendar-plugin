@@ -72,8 +72,10 @@ export class GanttView extends BaseSrcView implements ISubscriber {
 
     const checkBoxContainer = container.createDiv()
     const htmlContainer = container.createDiv(/*{cls: 'class'}*/)
+    const legendContainter = container.createDiv(/*{cls: 'class'}*/)
 
     this.render(htmlContainer)
+    this.renderLegend(legendContainter)
     this.renderSrcCheckboxes(checkBoxContainer)
   }
 
@@ -200,6 +202,23 @@ export class GanttView extends BaseSrcView implements ISubscriber {
       // on_click: (event: IEvent) => {console.log(event); this.noteManager.openNote(event.extra.path);}
     }
   }
+
+  private renderLegend(container: HTMLElement) {
+    const legend = container.createDiv({ cls: 'gantt-legend' });
+
+    const legendItems = [
+      { className: 'full', label: 'Full data (start and end)' },
+      { className: 'only-deadline', label: 'Only end (deadline)' },
+      { className: 'only-do-days', label: 'Only start' },
+      { className: 'nothing', label: 'No data' }
+    ];
+
+    for (let item of legendItems) {
+        const itemEl = legend.createDiv({ cls: 'gantt-legend-item' });
+        itemEl.createDiv({ cls: `gantt-legend-color ${item.className}` });
+        itemEl.createSpan({ text: item.label });
+    }
+}
 }
 
 

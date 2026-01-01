@@ -1321,6 +1321,12 @@ a.fc-event:hover {
     --g-today-highlight: #37352f;
     --g-popup-actions: #ebeff2;
     --g-weekend-highlight-color: #f7f7f7;
+
+
+    --g-bar-full-colour: #86AAAD;
+    --g-bar-deadlines-colour: #cb3793;
+    --g-bar-doDays-colour: #a7792a;
+    --g-bar-nothing-colour: #ed3d3d
 }
 
 .gantt-container {
@@ -1647,16 +1653,16 @@ a.fc-event:hover {
     }
 
     & .full .bar {
-      fill: #86AAAD
+      fill: var(--g-bar-full-colour)
     }
     .only-deadline .bar {
-      fill: #cb3793
+      fill: var(--g-bar-deadlines-colour)
     }
     .only-do-days .bar {
-      fill: #a7792a
+      fill: var(--g-bar-doDays-colour)
     }
     .nothing .bar {
-      fill: #ed3d3d
+      fill: var(--g-bar-nothing-colour)
     }
 
     & .bar-wrapper {
@@ -1679,3 +1685,91 @@ a.fc-event:hover {
     }
 }
 
+/* Легенда цветов для событий календаря */
+.fc-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px;
+    background-color: var(--background-secondary);
+    border-bottom: 1px solid var(--background-modifier-border);
+    margin-bottom: 10px;
+    border-radius: 5px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.legend-color {
+    width: 15px;
+    height: 15px;
+    border-radius: 3px;
+    border: 1px solid var(--background-modifier-border);
+}
+
+/* Цвета для разных типов событий */
+.legend-color.full {
+    background-color: var(--g-bar-full-colour);
+}
+
+.legend-color.only-deadline {
+    background-color: var(--g-bar-deadlines-colour);
+}
+
+.legend-color.only-do-days {
+    background-color: var(--g-bar-doDays-colour);
+}
+
+.legend-color.nothing {
+    background-color: var(--g-bar-nothing-colour);
+}
+
+/* Для графика Ганта добавьте эти стили */
+.gantt-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    padding: 10px;
+    background-color: var(--background-secondary);
+    border-bottom: 1px solid var(--background-modifier-border);
+    margin-bottom: 10px;
+}
+
+.gantt-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.gantt-legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+}
+
+/* Те же цвета, что и в Ганте */
+.gantt-legend-color.full {
+    background-color: var(--g-bar-full-colour);
+    border: 1px solid var(--g-bar-border);
+}
+
+.gantt-legend-color.only-deadline {
+    background-color: var(--g-bar-deadlines-colour);
+    border: 1px solid var(--g-bar-border);
+}
+
+.gantt-legend-color.only-do-days {
+    background-color: var(--g-bar-doDays-colour);
+    border: 1px solid var(--g-bar-border);
+}
+
+.gantt-legend-color.nothing {
+    background-color: var(--g-bar-nothing-colour);
+    border: 1px solid var(--g-bar-border);
+}
