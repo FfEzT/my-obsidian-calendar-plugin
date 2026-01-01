@@ -1,12 +1,12 @@
-import { ItemView, Platform, WorkspaceLeaf, Notice, Modal, App, Setting, Menu, Component } from 'obsidian';
-import { MSG_PLG_NAME, TEXT_DONE, CALENDAR_VIEW_TYPE, CALENDAR_TAB_NAME } from '../constants';
-import { CalendarEvent, CalendarSettings, IPage, ISubscriber, Src } from '../types';
-import { CalendarEventToIDate, getColourFromPath, IDateToCalendarEvent, millisecToString, templateIDTick, templateNameTick, timeAdd } from '../util';
-import { renderCalendar } from 'lib/obsidian-full-calendar/calendar';
-import { Calendar } from '@fullcalendar/core';
-import { Cache } from 'src/cache';
-import NoteManager from 'src/NoteManager';
-
+import { ItemView, Platform, WorkspaceLeaf, Notice, Modal, App, Setting, Menu, Component } from 'obsidian'
+import { MSG_PLG_NAME, TEXT_DONE, CALENDAR_VIEW_TYPE, CALENDAR_TAB_NAME } from '../constants'
+import { CalendarEvent, CalendarSettings, IPage, ISubscriber, Src } from '../types'
+import { CalendarEventToIDate, getColourFromPath, IDateToCalendarEvent, millisecToString, templateIDTick, templateNameTick, timeAdd } from '../util'
+import { renderCalendar } from 'lib/obsidian-full-calendar/calendar'
+import { Calendar } from '@fullcalendar/core'
+import { Cache } from 'src/cache'
+import NoteManager from 'src/NoteManager'
+import { BaseSrcView } from './BaseSrcView'
 
 export interface IEvent {
   start: Date
@@ -23,17 +23,12 @@ export interface IEvent {
   }
 }
 
-
-export class CalendarView extends ItemView implements ISubscriber {
+export class CalendarView extends BaseSrcView implements ISubscriber {
   private cache: Cache
 
   private calendar: Calendar | null = null
 
   private idForCache: number
-
-  private eventSrc: Src[]
-
-  private selectedSrcPaths: Set<string> = new Set()
 
   private noteManager: NoteManager
 
@@ -52,40 +47,35 @@ export class CalendarView extends ItemView implements ISubscriber {
     noteManager: NoteManager,
     placeForCreatingNote: string,
   ) {
-    super(leaf)
+    super(leaf, eventSrc)
 
     this.cache = cache
     this.idForCache = idForCache
-    this.eventSrc = eventSrc
     this.noteManager = noteManager
     this.calendarSettings = calendarSettings
     this.placeForCreatingNote = placeForCreatingNote
-
-    for (let src of eventSrc) {
-      this.selectedSrcPaths.add(src.path)
-    }
   }
 
-  public getViewType() {return CALENDAR_VIEW_TYPE}
+  public getViewType() { return CALENDAR_VIEW_TYPE }
 
-  public getDisplayText() {return CALENDAR_TAB_NAME}
+  public getDisplayText() { return CALENDAR_TAB_NAME }
 
   public async onOpen() {
     if (Platform.isMobile)
-      this.containerEl.style.height = "95vh"
+      this.containerEl.style.height = '95vh'
 
     const { containerEl } = this
     const container = containerEl.children[1]
     container.empty()
     const checkBoxContainer = container.createDiv()
-    const calendarContainer = container.createDiv(/*{cls: 'class'}*/)
+    const calendarContainer = container.createDiv()
 
     this.render(calendarContainer)
     this.renderSrcCheckboxes(checkBoxContainer)
   }
 
   public onResize() {
-    this.calendar?.render();
+    this.calendar?.render()
   }
 
   public addFile(data: IPage): void {
@@ -142,64 +132,12 @@ export class CalendarView extends ItemView implements ISubscriber {
     if (!this.calendar)
       return
 
-    this.calendar.destroy();
-    this.calendar = null;
+    this.calendar.destroy()
+    this.calendar = null
     this.cache.unsubscribe(this.idForCache)
   }
 
-  private renderSrcCheckboxes(srcCheckboxContainer: HTMLElement) {
-    srcCheckboxContainer.empty()
-    srcCheckboxContainer.addClass("src-checkboxes")
-
-    for (let src of this.eventSrc) {
-      const checkboxContainer = srcCheckboxContainer!.createDiv({cls: 'src-checkbox-item'})
-
-      const checkbox = checkboxContainer.createEl('input', {
-        type: 'checkbox',
-        attr: {
-          id: `src-checkbox-calendar-${src.path}`,
-          checked: this.selectedSrcPaths.has(src.path) ? 'checked' : null
-        }
-      })
-
-      checkbox.addEventListener('change', () => {
-        if (checkbox.checked) {
-          this.selectedSrcPaths.add(src.path)
-        } else {
-          this.selectedSrcPaths.delete(src.path)
-        }
-        this.refreshCalendar()
-      })
-
-      checkboxContainer.createEl('label', {
-        text: src.path,
-        attr: {for: `src-checkbox-calendar-${src.path}`}
-      })
-    }
-  }
-
-  // TODO в рефактор (можно с помощью ООП)
-  private isPathInActiveSrc(pagePath: string): boolean {
-    const eventSrc = this.eventSrc.filter(
-      src => src.isIn(pagePath)
-    )
-    if (eventSrc.length == 0)
-      return false
-
-    const src = eventSrc.reduce(
-      (prevSrc, curSrc) => {
-        if (prevSrc.getFolderDepth() < curSrc.getFolderDepth())
-          return curSrc
-
-        return prevSrc
-      },
-      eventSrc[0]
-    )
-
-    return this.selectedSrcPaths.has(src.path)
-  }
-
-  private refreshCalendar() {
+  protected override async refreshView() {
     if (!this.calendar)
       return
 
@@ -210,10 +148,10 @@ export class CalendarView extends ItemView implements ISubscriber {
     // @ts-ignore
     const events: IEvent[] = [...this.calendarSettings.restTime]
     for (let page of this.localStorage) {
-      if ( !this.isPathInActiveSrc(page.file.path) )
+      if (!this.isPathInActiveSrc(page.file.path))
         continue
 
-      events.push( ...this.pageToEvents(page) )
+      events.push(...this.pageToEvents(page))
     }
 
     for (let event of events) {
@@ -229,8 +167,8 @@ export class CalendarView extends ItemView implements ISubscriber {
     const colours = this.calendarSettings.colours
 
     const structureTemplate = {
-      id: "",
-      title: "",
+      id: '',
+      title: '',
       borderColor: colours.default,
       color: getColourFromPath(page.file.path),
       editable: true,
@@ -239,13 +177,13 @@ export class CalendarView extends ItemView implements ISubscriber {
     if (page.ff_date) {
       const event = IDateToCalendarEvent(page)
       if (!event)
-        throw "unreachable"
+        throw 'unreachable'
 
       const structure: IEvent = {
         ...structureTemplate,
         id: page.file.path,
         title: page.file.name,
-        ...event
+        ...event,
       }
       if (page.ff_frequency)
         structure.borderColor = colours.frequency
@@ -269,9 +207,9 @@ export class CalendarView extends ItemView implements ISubscriber {
         borderColor: colours.tick,
         extendedProps: {
           tickName: tick.name,
-          notePath: page.file.path
+          notePath: page.file.path,
         },
-        ...event
+        ...event,
       }
       result.push(structure)
     }
@@ -279,7 +217,7 @@ export class CalendarView extends ItemView implements ISubscriber {
     return result
   }
 
-  private async render(container: Element)  {
+  private async render(container: Element) {
     const subscribedData = await this.cache.subscribe(this.idForCache, this.eventSrc, this)
     this.localStorage = subscribedData
 
@@ -288,7 +226,7 @@ export class CalendarView extends ItemView implements ISubscriber {
       if (!this.isPathInActiveSrc(page.file.path))
         continue
 
-      events.push( ...this.pageToEvents(page) )
+      events.push(...this.pageToEvents(page))
     }
 
     this.calendar = renderCalendar(
@@ -297,10 +235,10 @@ export class CalendarView extends ItemView implements ISubscriber {
         //@ts-ignore // TODO remove
         events: [
           ...this.calendarSettings.restTime,
-          ...events
-        ]
-      },// as EventSource,
-        this.getSettingsCalendar(),
+          ...events,
+        ],
+      }, // as EventSource,
+      this.getSettingsCalendar(),
     )
     this.calendar.setOption('weekNumbers', true)
 
@@ -311,11 +249,10 @@ export class CalendarView extends ItemView implements ISubscriber {
           this.calendar?.changeView('timeGrid3Days')
         else
           this.calendar?.changeView('timeGridWeek')
-      }, 1
+      }, 1,
     )
     this.calendar.render()
   }
-
 
   private getSettingsCalendar() {
     const result = {
@@ -324,7 +261,7 @@ export class CalendarView extends ItemView implements ISubscriber {
       timeFormat24h: true,
 
       eventClick: (arg: any) => {
-        const {event, jsEvent} = arg
+        const { event, jsEvent } = arg
         this.noteManager.openNote(getPathFromEvent(event))
       },
 
@@ -334,7 +271,7 @@ export class CalendarView extends ItemView implements ISubscriber {
         const event: CalendarEvent = {
           start: newPos.start,
           end: newPos.end,
-          allDay: newPos.allDay
+          allDay: newPos.allDay,
         }
 
         if (props.notePath) {
@@ -346,7 +283,7 @@ export class CalendarView extends ItemView implements ISubscriber {
           }
 
           const tick = page.ticks.find(
-            el => el.name == props.tickName
+            el => el.name == props.tickName,
           )
           if (!tick) {
             console.warn(`${MSG_PLG_NAME}: can't find tick by page. Page - tickName: ${props.notePath} - ${props.tickName}`)
@@ -361,13 +298,12 @@ export class CalendarView extends ItemView implements ISubscriber {
           const newProp = CalendarEventToIDate(event)
           if (newPos.allDay && !oldPos.allDay) {
             newProp['ff_duration'] = millisecToString(
-              tick.ff_duration?.as("milliseconds")
+              tick.ff_duration?.as('milliseconds'),
             )
           }
 
           this.noteManager.changeTickFile(props.notePath, props.tickName, newProp)
-        }
-        else {
+        } else {
           const page = this.cache.getPage(newPos.id)
 
           if (!page) {
@@ -383,17 +319,17 @@ export class CalendarView extends ItemView implements ISubscriber {
           const newProp = CalendarEventToIDate(event)
           if (newPos.allDay && !oldPos.allDay) {
             newProp['ff_duration'] = millisecToString(
-              page.ff_duration?.as("milliseconds") || 0
+              page.ff_duration?.as('milliseconds') || 0,
             )
           }
 
           this.noteManager.changePropertyFile(
             newPos.id,
             property => {
-              property['ff_date']      = newProp['ff_date']?.toISOString().slice(0,-14)
+              property['ff_date'] = newProp['ff_date']?.toISOString().slice(0, -14)
               property['ff_timeStart'] = newProp['ff_timeStart']
-              property['ff_duration']  = newProp['ff_duration']
-            }
+              property['ff_duration'] = newProp['ff_duration']
+            },
           )
         }
 
@@ -414,35 +350,35 @@ export class CalendarView extends ItemView implements ISubscriber {
                 () => this.noteManager.changePropertyFile(
                   pathOfFile,
                   property => {
-                    const newProp = CalendarEventToIDate({start, end, allDay})
+                    const newProp = CalendarEventToIDate({ start, end, allDay })
 
-                    property['ff_date']      = newProp['ff_date']?.toISOString().slice(0,-14)
+                    property['ff_date'] = newProp['ff_date']?.toISOString().slice(0, -14)
                     property['ff_timeStart'] = newProp['ff_timeStart']
-                    property['ff_duration']  = newProp['ff_duration']
-                  }
+                    property['ff_duration'] = newProp['ff_duration']
+                  },
                 ),
-                1500
+                1500,
               )
             }
             catch (e) {
               console.error(e)
-              new Notice("Hm... error...")
+              new Notice('Hm... error...')
             }
-          }
+          },
         ).open()
       },
       openContextMenuForEvent: (e: IEvent, mouseEvent: MouseEvent) => {
         this.contextMenuForEvent(e, mouseEvent)
       },
-      slotDuration: this.calendarSettings.slotDuration
+      slotDuration: this.calendarSettings.slotDuration,
     }
 
     if (Platform.isMobile) {
       result.eventClick = (arg: any) => {
-        const {event, jsEvent} = arg
+        const { event, jsEvent } = arg
         this.contextMenuForEvent(event, jsEvent)
       }
-      result.openContextMenuForEvent = (_:IEvent, __:MouseEvent) => {}
+      result.openContextMenuForEvent = (_: IEvent, __: MouseEvent) => {}
     }
 
     return result
@@ -454,9 +390,8 @@ export class CalendarView extends ItemView implements ISubscriber {
     menu.addItem(
       (item) => item.setTitle(event.id)
         .onClick(
-          () => this.noteManager.openNote(getPathFromEvent(event))
-        )
-
+          () => this.noteManager.openNote(getPathFromEvent(event)),
+        ),
     )
 
     menu.showAtMouseEvent(mouseEvent)
@@ -469,38 +404,37 @@ class NameModal extends Modal {
   private onSubmit: Function
 
   constructor(app: App, onSubmit: Function) {
-    super(app);
-    this.onSubmit = onSubmit;
+    super(app)
+    this.onSubmit = onSubmit
   }
 
   onOpen() {
     const { contentEl } = this
 
-    contentEl.createEl("h1", { text: "Name of task" })
+    contentEl.createEl('h1', { text: 'Name of task' })
 
     new Setting(contentEl)
-    .setName("Name")
-    .addText(
-      text => text.onChange(value => this.result = value)
-    )
+      .setName('Name')
+      .addText(
+        text => text.onChange(value => this.result = value),
+      )
 
     new Setting(contentEl)
-    .addButton(
-      (btn) => btn.setButtonText("Submit")
-        .setCta()
-        .onClick(() => {
-          this.close();
-          this.onSubmit(this.result);
-        }));
+      .addButton(
+        (btn) => btn.setButtonText('Submit')
+          .setCta()
+          .onClick(() => {
+            this.close()
+            this.onSubmit(this.result)
+          }),
+      )
   }
 
   onClose() {
-    this.contentEl.empty();
+    this.contentEl.empty()
   }
 }
-
 
 function getPathFromEvent(event: IEvent): string {
   return event?.extendedProps?.notePath || event.id
 }
-

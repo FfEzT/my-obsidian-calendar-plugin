@@ -1,20 +1,18 @@
-import { ItemView, WorkspaceLeaf } from 'obsidian';
+import { WorkspaceLeaf } from 'obsidian';
 import Gantt from '../../lib/frappe-gantt/src/index'
 import { GANTT_VIEW_TYPE, GANTT_TAB_NAME, MillisecsInDay } from '../constants';
 import { GanttSettings, IPage, ISubscriber, Src } from '../types';
-import { CalendarEventToIDate, getBlockers, getColourFromPath, getProgress } from '../util';
+import { getBlockers, getProgress } from '../util';
 import { Cache } from 'src/cache';
 import NoteManager from 'src/NoteManager';
-
-// TODO сделать папку
+import { BaseSrcView } from './BaseSrcView';
 
 const DEFAULT_OFFSET_DAY = 14 // TODO 7 is constant
 
-// TODO отображать ff_date для задачи
 
 // TODO
 const enumToCustomClass = {
-  FULL: "full",
+  FULL: 'full',
   ONLY_DEADLINE: 'only-deadline', // TODO gradient document
   ONLY_START: 'only-do-days', // TODO orange document
   NOTHING: 'nothing' // TODO red document
@@ -33,16 +31,12 @@ type IEvent = {
   }
 }
 
-export class GanttView extends ItemView implements ISubscriber {
+export class GanttView extends BaseSrcView implements ISubscriber {
   static CONTAINER_ID = 'gantt'
 
   private cache: Cache
 
   private idForCache: number
-
-  private eventSrc: Src[]
-
-  private selectedSrcPaths: Set<string> = new Set()
 
   private noteManager: NoteManager
 
@@ -58,18 +52,13 @@ export class GanttView extends ItemView implements ISubscriber {
     cache: Cache,
     noteManager: NoteManager,
   ) {
-    super(leaf)
+    super(leaf, eventSrc)
 
     this.cache = cache
     this.idForCache = idForCache
-    this.eventSrc = eventSrc
     this.noteManager = noteManager
 
     this.localStorage = new Graph(cache, noteManager)
-
-    for (let src of eventSrc) {
-      this.selectedSrcPaths.add(src.path)
-    }
   }
 
   public getViewType() { return GANTT_VIEW_TYPE }
@@ -81,9 +70,7 @@ export class GanttView extends ItemView implements ISubscriber {
     const container = containerEl.children[1]
     container.empty()
 
-    // TODO DRY (calendar)
     const checkBoxContainer = container.createDiv()
-
     const htmlContainer = container.createDiv(/*{cls: 'class'}*/)
 
     this.render(htmlContainer)
@@ -96,7 +83,7 @@ export class GanttView extends ItemView implements ISubscriber {
     if (!this.isPathInActiveSrc(page.file.path))
       return
 
-    this.refresh()
+    this.refreshView()
   }
 
   public async changeFile(newPage: IPage, oldPage: IPage) {
@@ -142,7 +129,7 @@ export class GanttView extends ItemView implements ISubscriber {
     if (!this.isPathInActiveSrc(page.file.path))
       return
 
-    await this.refresh()
+    await this.refreshView()
   }
 
   public reset() {
@@ -152,68 +139,12 @@ export class GanttView extends ItemView implements ISubscriber {
 
   onunload() { }
 
-  private async refresh() {
+  protected override async refreshView() {
     const events = (await this.localStorage.getEvents())
       .filter(
         event => this.isPathInActiveSrc(event.extra.path)
       )
     this.gantt.refresh(events)
-  }
-
-
-
-  // TODO что будет, если ResetStorage
-  // TODO это повторяется в CalendarView надо черех ооп делать
-  private renderSrcCheckboxes(srcCheckboxContainer: HTMLElement) {
-    srcCheckboxContainer.empty()
-    srcCheckboxContainer.addClass("src-checkboxes")
-
-    for (let src of this.eventSrc) {
-      const checkboxContainer = srcCheckboxContainer!.createDiv({ cls: 'src-checkbox-item' })
-
-      const checkbox = checkboxContainer.createEl('input', {
-        type: 'checkbox',
-        attr: {
-          id: `src-checkbox-gantt-${src.path}`,
-          checked: this.selectedSrcPaths.has(src.path) ? 'checked' : null
-        }
-      })
-
-      checkbox.addEventListener('change', async () => {
-        if (checkbox.checked) {
-          this.selectedSrcPaths.add(src.path)
-        } else {
-          this.selectedSrcPaths.delete(src.path)
-        }
-        await this.refresh()
-      })
-
-      checkboxContainer.createEl('label', {
-        text: src.path,
-        attr: { for: `src-checkbox-gantt-${src.path}` }
-      })
-    }
-  }
-
-  // TODO в рефактор (можно с помощью ООП)
-  private isPathInActiveSrc(pagePath: string): boolean {
-    const eventSrc = this.eventSrc.filter(
-      src => src.isIn(pagePath)
-    )
-    if (eventSrc.length == 0)
-      return false
-
-    const src = eventSrc.reduce(
-      (prevSrc, curSrc) => {
-        if (prevSrc.getFolderDepth() < curSrc.getFolderDepth())
-          return curSrc
-
-        return prevSrc
-      },
-      eventSrc[0]
-    )
-
-    return this.selectedSrcPaths.has(src.path)
   }
 
   private async render(container: Element) {
@@ -360,8 +291,6 @@ class Graph {
       event.id,
       { event, to: new Set, from: new Set(blockers) }
     )
-
-
   }
 
   public deletePage(page: IPage) {
@@ -376,8 +305,7 @@ class Graph {
   private async calcEvents(history: Node[]): Promise<IEvent[]> {
     const { event, from, to } = history[0]
     if (!event.name) {
-      console.error("unreachable") // TODO add exception
-      event.name = 'null'
+      throw Error('unreachable')
     }
 
     const children: IEvent[][] = await Promise.all(
@@ -483,7 +411,6 @@ function convertToGraphEvent(page: IPage): GraphEvent {
     start: page.ff_date,
     end: page.ff_deadline
   }
-
 }
 
 async function calculateNextStartDate(

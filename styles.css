@@ -1280,11 +1280,13 @@ a.fc-event:hover {
 
 .src-checkboxes {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 10px;
   padding: 10px;
   background-color: var(--background-secondary);
   border-bottom: 1px solid var(--background-modifier-border);
+  white-space: nowrap;
+  overflow-x: scroll;
 }
 
 .src-checkbox-item {
