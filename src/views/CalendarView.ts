@@ -196,7 +196,6 @@ export class CalendarView extends BaseSrcView implements ISubscriber {
     }
     for (let tick of page.ticks) {
       const event = IDateToCalendarEvent(tick)
-      console.log(event)
       if (!event)
         continue
 
