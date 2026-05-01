@@ -183,6 +183,9 @@ export class GanttView extends BaseSrcView implements ISubscriber {
       readonly_progress: true,
       scroll_to: date,
 
+      view_modes: ['Day', 'Week', 'Month'],
+      view_mode_select: true,
+
       on_date_change: async (task: GanttTaskInternal, start: Date, end: Date) => {
         // ! для ISO (он переводит в гринвич мое время)
         // я тут говорю, что я в гринвиче
@@ -334,11 +337,12 @@ class Graph {
     const children: IEvent[][] = await Promise.all(
       Array.from(to)
         .map(path => this.hashTable.get(path))
-        .map(node => node as Node)
-        .map(
-          async (node) => await this.calcEvents([node, ...history])
-        )
-        .filter(Boolean)
+        .filter((node): node is Node => !!node)
+        .map(async (node) => {
+          if (!node.event.name) return []
+          if (history.some((h) => h.event.id === node.event.id)) return []
+          return this.calcEvents([node, ...history])
+        }),
     )
 
     let start: Date, end: Date, colour: string, toSkip = false
@@ -411,16 +415,41 @@ class Graph {
     return result
   }
 
-  private getRoots(): Node[] {
-    const roots = []
-    for (let [key, node] of this.hashTable.entries()) {
-      if (node.from.size != 0)
+  private collectReachableFromRoots(roots: Node[]): Set<string> {
+    const reachable = new Set<string>()
+    const stack = roots.map((n) => n.event.id)
+    while (stack.length) {
+      const id = stack.pop()!
+      if (reachable.has(id))
         continue
+      reachable.add(id)
 
-      if (node.to.size == 0 && !node.event.end)
-        continue
+      const node = this.hashTable.get(id)
+      if (!node) continue
+      for (const childId of node.to) {
+        if (!reachable.has(childId)) stack.push(childId)
+      }
+    }
+    return reachable
+  }
+
+  private getRoots(): Node[] {
+    const roots: Node[] = []
+    for (const [, node] of this.hashTable.entries()) {
+      if (node.from.size != 0) continue
+      if (node.to.size == 0 && !node.event.end) continue
+      roots.push(node)
+    }
+
+    let reachable = this.collectReachableFromRoots(roots)
+
+    for (const [, node] of this.hashTable.entries()) {
+      if (reachable.has(node.event.id)) continue
+      if (!node.event.name) continue
+      if (node.to.size == 0 && !node.event.end) continue
 
       roots.push(node)
+      reachable = this.collectReachableFromRoots(roots)
     }
 
     return roots

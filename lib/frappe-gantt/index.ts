@@ -1716,18 +1716,18 @@ export default class Gantt {
     }
 
     get_all_dependent_tasks(task_id: string): string[] {
-        let out: string[] = [];
-        let to_process = [task_id];
-        while (to_process.length) {
-            const deps = to_process.reduce((acc, curr) => {
-                const next = this.dependency_map[curr];
-                return acc.concat(next ?? []);
-            }, [] as string[]);
-
-            out = out.concat(deps);
-            to_process = deps.filter((d) => !to_process.includes(d));
+        const out: string[] = [];
+        const seen = new Set<string>([task_id]);
+        const queue = [...(this.dependency_map[task_id] ?? [])];
+        while (queue.length) {
+            const id = queue.shift()!;
+            if (seen.has(id)) continue;
+            seen.add(id);
+            out.push(id);
+            for (const next of this.dependency_map[id] ?? []) {
+                if (!seen.has(next)) queue.push(next);
+            }
         }
-
         return out.filter(Boolean);
     }
 
