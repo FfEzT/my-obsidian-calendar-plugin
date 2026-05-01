@@ -6,7 +6,7 @@ import { GanttSettings, IPage, ISubscriber, Src } from '../types';
 import { getBlockers, getProgress } from '../util';
 import { Cache } from 'src/cache';
 import NoteManager from 'src/NoteManager';
-import { BaseSrcView } from './BaseSrcView';
+import { BaseSrcView, INoteSourcesActions } from './BaseSrcView';
 
 const DEFAULT_OFFSET_DAY = 14 // TODO 7 is constant
 
@@ -49,11 +49,12 @@ export class GanttView extends BaseSrcView implements ISubscriber {
     leaf: WorkspaceLeaf,
     idForCache: number,
     eventSrc: Src[],
+    noteSourcesActions: INoteSourcesActions,
     ganttSettings: GanttSettings,
     cache: Cache,
     noteManager: NoteManager,
   ) {
-    super(leaf, eventSrc)
+    super(leaf, eventSrc, noteSourcesActions)
 
     this.cache = cache
     this.idForCache = idForCache
@@ -139,6 +140,10 @@ export class GanttView extends BaseSrcView implements ISubscriber {
   public reset() {
     this.onunload()
     this.onOpen()
+  }
+
+  protected override resetViewForSourceChange() {
+    this.reset()
   }
 
   onunload() { }

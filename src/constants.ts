@@ -2,7 +2,7 @@ import { PluginSettings, Src } from "./types"
 
 export const MSG_PLG_NAME = "MyCalendar"
 
-const EVENT_SRC = "databases"
+const EVENT_SRC = "/"
 const PLACE_FOR_CREATING_NOTE = "databases"
 
 const daysOfWeek = [ '1','2','3','4','5','6','0' ] // these recurrent events move separately
@@ -48,10 +48,11 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     ]
   },
   source: {
-    noteSources: [{
+    activeNoteSources: [{
       path: EVENT_SRC,
       excludes: []
     }],
+    presets: [],
 
     // NOTE default path where note will be created
     defaultCreatePath: PLACE_FOR_CREATING_NOTE

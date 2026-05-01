@@ -1773,3 +1773,7 @@ a.fc-event:hover {
     background-color: var(--g-bar-nothing-colour);
     border: 1px solid var(--g-bar-border);
 }
+
+body.my-cal-source-folders-suggest-top .suggestion-container {
+    z-index: calc(var(--layer-modal, 50) + 2);
+}

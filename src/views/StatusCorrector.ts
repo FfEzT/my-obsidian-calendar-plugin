@@ -122,6 +122,11 @@ export default class StatusCorrector implements ISubscriber {
     page.ff_status = status
     await this.noteManager.changeStatusFile(page.file.path, status)
 
+    const tFile = this.noteManager.getFileByPath(page.file.path)
+    if (tFile) {
+      await this.cache.changeFile(tFile)
+    }
+
     return true
   }
 

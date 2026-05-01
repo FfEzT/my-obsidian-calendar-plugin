@@ -4,7 +4,7 @@ export class Src {
   private _path: string;
 
   get path(): string {
-    return this._path;
+    return this._path
   }
 
   private _excludes: string[];
@@ -14,7 +14,12 @@ export class Src {
   }
 
   constructor(path: string) {
-    this._path = path;
+    const t = path.trim()
+    if (t === "/")
+      this._path =  ""
+    else
+      this._path =  t
+
     this._excludes = [];
   }
 
@@ -28,7 +33,7 @@ export class Src {
 
   public toSrcJson(): SrcJSON {
     return {
-      path: this._path,
+      path: this._path === "" ? "/" : this._path,
       excludes: [...this._excludes]
     }
   }
@@ -39,7 +44,7 @@ export class Src {
         if (!exclude.startsWith(this._path))
           return false
 
-        if (exclude !== this._path)
+        if (exclude === this._path)
           return false
 
         return true
@@ -69,6 +74,8 @@ export class Src {
   }
 
   public getFolderDepth(): number {
+    if (this._path === "")
+      return 0
     return this._path.split('/').length
   }
 }
@@ -101,6 +108,12 @@ export type CalendarSettings = {
 
 export type GanttSettings = {}
 
+export type SourceFolderPreset = {
+  id: string
+  name: string
+  noteSources: SrcJSON[]
+}
+
 export type PluginSettings = {
   statusCorrector: {
     isOn: boolean,
@@ -108,7 +121,8 @@ export type PluginSettings = {
   },
   calendar: CalendarSettings,
   source: {
-    noteSources: SrcJSON[],
+    activeNoteSources: SrcJSON[],
+    presets: SourceFolderPreset[],
 
     // NOTE default path where note will be created
     defaultCreatePath: string

@@ -6,7 +6,7 @@ import { renderCalendar } from 'lib/obsidian-full-calendar/calendar'
 import { Calendar } from '@fullcalendar/core'
 import { Cache } from 'src/cache'
 import NoteManager from 'src/NoteManager'
-import { BaseSrcView } from './BaseSrcView'
+import { BaseSrcView, INoteSourcesActions } from './BaseSrcView'
 
 export interface IEvent {
   start: Date
@@ -42,12 +42,13 @@ export class CalendarView extends BaseSrcView implements ISubscriber {
     leaf: WorkspaceLeaf,
     idForCache: number,
     eventSrc: Src[],
+    noteSourcesActions: INoteSourcesActions,
     calendarSettings: CalendarSettings,
     cache: Cache,
     noteManager: NoteManager,
     placeForCreatingNote: string,
   ) {
-    super(leaf, eventSrc)
+    super(leaf, eventSrc, noteSourcesActions)
 
     this.cache = cache
     this.idForCache = idForCache
@@ -126,6 +127,10 @@ export class CalendarView extends BaseSrcView implements ISubscriber {
   public reset() {
     this.onunload()
     this.onOpen()
+  }
+
+  protected override resetViewForSourceChange() {
+    this.reset()
   }
 
   onunload() {

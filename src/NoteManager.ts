@@ -46,6 +46,10 @@ export default class NoteManager {
     )
   }
 
+  public getFileByPath(path: string): TFile | null {
+    return this.vault.getFileByPath(path)
+  }
+
   public async changeTickFile(path: string, tickname:string, event: IDate) {
     // NOTE это отправит сигнал cache
     const tFile = this.metadataCache.getFirstLinkpathDest(path, '') as TFile

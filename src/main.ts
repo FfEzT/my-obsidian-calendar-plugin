@@ -1,7 +1,7 @@
 import { App, Plugin, PluginManifest, TFile, View, WorkspaceLeaf } from 'obsidian';
 import { CalendarView} from "./views/CalendarView"
 import { Cache } from "./cache"
-import { PluginSettings, Src } from './types';
+import { PluginSettings, SourceFolderPreset, Src, SrcJSON } from './types';
 import { MySettingTab } from './setting';
 import { DEFAULT_SETTINGS, CACHE_ID, MSG_PLG_NAME, CALENDAR_VIEW_TYPE, GANTT_VIEW_TYPE } from './constants';
 import StatusCorrector from './views/StatusCorrector';
@@ -9,7 +9,8 @@ import { TickChecker } from './views/TickCheker';
 import NoteManager from './NoteManager';
 import { VaultOps } from './vaultOps';
 import { GanttView } from './views/GanttView';
-
+import { SourceFoldersModal, ISourceFoldersPluginApi } from './SourceFoldersModal';
+import { INoteSourcesActions } from './views/BaseSrcView';
 
 export default class MyPlugin extends Plugin {
   private noteManager: NoteManager
@@ -45,16 +46,11 @@ export default class MyPlugin extends Plugin {
 
     this.initRegister()
 
-    const src: Src[] = []
-    for (let i of this.settings.source.noteSources) {
-      const tmp = Src.fromSrcJson(i)
-      if (tmp)
-        src.push(tmp)
-    }
+    const sharedEventSrc = this.rebuildSharedEventSrc()
 
     this.tickChecker = new TickChecker(
       CACHE_ID.TICK_CHECKER,
-      src,
+      sharedEventSrc,
       this.cache,
       this.noteManager
     )
@@ -62,7 +58,7 @@ export default class MyPlugin extends Plugin {
     if (this.settings.statusCorrector.isOn) {
       this.statusCorrector = new StatusCorrector(
         CACHE_ID.STATUS_CORRECTOR,
-        src,
+        sharedEventSrc,
         this.cache,
         this.noteManager
       )
@@ -87,7 +83,8 @@ export default class MyPlugin extends Plugin {
         this.calendar = new CalendarView(
           leaf,
           CACHE_ID.CALENDAR,
-          src,
+          sharedEventSrc,
+          this.getNoteSourcesActions(),
           this.settings.calendar,
           this.cache,
           this.noteManager,
@@ -104,7 +101,8 @@ export default class MyPlugin extends Plugin {
           this.gantt = new GanttView(
             leaf,
             CACHE_ID.GANTT,
-            src,
+            sharedEventSrc,
+            this.getNoteSourcesActions(),
             {}, // TODO
             this.cache,
             this.noteManager,
@@ -222,7 +220,53 @@ export default class MyPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
+  private getNoteSourcesActions(): INoteSourcesActions {
+    return {
+      openSourceFolderPresetsModal: () => {
+        new SourceFoldersModal(
+          this.app,
+          new VaultOps(this.app.vault),
+          this.getSourceFoldersPluginApi(),
+        ).open()
+      },
+    }
+  }
 
+  private getSourceFoldersPluginApi(): ISourceFoldersPluginApi {
+    return {
+      getActiveFolders: () => structuredClone(this.settings.source.activeNoteSources),
+      applyActiveFolders: async (sources: SrcJSON[]) => {
+        const s = this.getSettings()
+        s.source.activeNoteSources = sources
+        await this.saveSettings(s)
+
+        const src = this.rebuildSharedEventSrc()
+        this.calendar?.reloadAfterSourceFoldersChange(src)
+        this.gantt?.reloadAfterSourceFoldersChange(src)
+      },
+      getPresets: () => [...this.settings.source.presets],
+      savePresets: async (presets: SourceFolderPreset[]) => {
+        const s = this.getSettings()
+        s.source.presets = presets
+        await this.saveSettings(s)
+      },
+    }
+  }
+
+  private rebuildSharedEventSrc(): Src[] {
+    const sharedEventSrc: Src[] = []
+    for (const json of this.settings.source.activeNoteSources) {
+      const tmp = Src.fromSrcJson(json)
+      if (tmp)
+        sharedEventSrc.push(tmp)
+    }
+    if (sharedEventSrc.length === 0) {
+      const fb = Src.fromSrcJson(DEFAULT_SETTINGS.source.activeNoteSources[0])
+      if (fb)
+        sharedEventSrc.push(fb)
+    }
+    return sharedEventSrc
+  }
 
   private async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData())

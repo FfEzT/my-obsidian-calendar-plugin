@@ -1,12 +1,20 @@
-import { ItemView, Platform, WorkspaceLeaf } from 'obsidian'
+import { ItemView, WorkspaceLeaf } from 'obsidian'
 import { Src } from 'src/types'
+
+export type INoteSourcesActions = {
+  openSourceFolderPresetsModal(): void
+}
 
 export abstract class BaseSrcView extends ItemView {
   private selectedSrcPaths: Set<string> = new Set()
 
   private _eventSrc: Src[]
 
-  constructor(leaf: WorkspaceLeaf, eventSrc: Src[]) {
+  constructor(
+    leaf: WorkspaceLeaf,
+    eventSrc: Src[],
+    private noteSourcesActions: INoteSourcesActions,
+  ) {
     super(leaf)
 
     this._eventSrc = eventSrc
@@ -15,9 +23,31 @@ export abstract class BaseSrcView extends ItemView {
     }
   }
 
+  protected selectAllSrcPaths() {
+    this.selectedSrcPaths.clear()
+    for (const src of this._eventSrc) {
+      this.selectedSrcPaths.add(src.path)
+    }
+  }
+
+  public reloadAfterSourceFoldersChange(src: Src[]) {
+    this._eventSrc = src
+
+    this.selectAllSrcPaths()
+    this.resetViewForSourceChange()
+  }
+
+  protected abstract resetViewForSourceChange(): void
+
   protected renderSrcCheckboxes(srcCheckboxContainer: HTMLElement) {
     srcCheckboxContainer.empty()
     srcCheckboxContainer.addClass('src-checkboxes')
+
+    const manageBtn = srcCheckboxContainer.createEl('button', { text: 'Folders & presets' })
+    manageBtn.addClass('mod-cta')
+    manageBtn.addEventListener('click', () => {
+      this.noteSourcesActions.openSourceFolderPresetsModal()
+    })
 
     const selectAllButton = srcCheckboxContainer.createEl('button', { text: 'Select All' })
     selectAllButton.addEventListener('click', async () => {
