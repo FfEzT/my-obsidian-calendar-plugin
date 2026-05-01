@@ -213,7 +213,7 @@ export default class StatusCorrector implements ISubscriber {
     await this.changeFile(page, page)
   }
 
-  public async changeFile(page: IPage, oldPage: IPage) {
+  public async changeFile(page: IPage, _oldPage: IPage) {
     const queuePaths: string[] = []
     const set = new Set<string>()
 
@@ -226,7 +226,7 @@ export default class StatusCorrector implements ISubscriber {
       const oldStatus = page.ff_status
 
       const isChanged = await this.correctNote(page)
-      if (!isChanged && page.ff_status == oldPage.ff_status)
+      if (!isChanged)
         continue
 
       new Notice(

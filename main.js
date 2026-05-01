@@ -32825,7 +32825,7 @@ var StatusCorrector = class {
   async addFile(page) {
     await this.changeFile(page, page);
   }
-  async changeFile(page, oldPage) {
+  async changeFile(page, _oldPage) {
     const queuePaths = [];
     const set = /* @__PURE__ */ new Set();
     queuePaths.push(page.file.path);
@@ -32835,7 +32835,7 @@ var StatusCorrector = class {
       const page2 = this.cache.getPage(path);
       const oldStatus = page2.ff_status;
       const isChanged = await this.correctNote(page2);
-      if (!isChanged && page2.ff_status == oldPage.ff_status)
+      if (!isChanged)
         continue;
       new import_obsidian5.Notice(
         `${page2.file.name} - change status: ${oldStatus} => ${page2.ff_status}`
