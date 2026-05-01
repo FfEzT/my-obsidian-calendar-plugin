@@ -1,5 +1,20 @@
+import type Gantt from './index';
+import type {
+    GanttTaskInternal,
+    PopupFactory,
+    PopupShowParams,
+} from './types';
+
 export default class Popup {
-    constructor(parent, popup_func, gantt) {
+    parent: HTMLElement;
+    popup_func: PopupFactory;
+    gantt: Gantt;
+    title!: HTMLElement | null;
+    subtitle!: HTMLElement | null;
+    details!: HTMLElement | null;
+    actions!: HTMLElement | null;
+
+    constructor(parent: HTMLElement, popup_func: PopupFactory, gantt: Gantt) {
         this.parent = parent;
         this.popup_func = popup_func;
         this.gantt = gantt;
@@ -7,7 +22,7 @@ export default class Popup {
         this.make();
     }
 
-    make() {
+    make(): void {
         this.parent.innerHTML = `
             <div class="title"></div>
             <div class="subtitle"></div>
@@ -22,26 +37,35 @@ export default class Popup {
         this.actions = this.parent.querySelector('.actions');
     }
 
-    show({ x, y, task, target }) {
+    show({ x, y, task, target }: PopupShowParams): void {
+        if (!this.actions) return;
         this.actions.innerHTML = '';
-        let html = this.popup_func({
+        const html = this.popup_func({
             task,
             chart: this.gantt,
             get_title: () => this.title,
-            set_title: (title) => (this.title.innerHTML = title),
+            set_title: (title: string) => {
+                if (this.title) this.title.innerHTML = title;
+            },
             get_subtitle: () => this.subtitle,
-            set_subtitle: (subtitle) => (this.subtitle.innerHTML = subtitle),
+            set_subtitle: (subtitle: string) => {
+                if (this.subtitle) this.subtitle.innerHTML = subtitle;
+            },
             get_details: () => this.details,
-            set_details: (details) => (this.details.innerHTML = details),
-            add_action: (html, func) => {
-                let action = this.gantt.create_el({
+            set_details: (details: string) => {
+                if (this.details) this.details.innerHTML = details;
+            },
+            add_action: (htmlFrag, func) => {
+                const action = this.gantt.create_el({
                     classes: 'action-btn',
                     type: 'button',
-                    append_to: this.actions,
+                    append_to: this.actions!,
                 });
-                if (typeof html === 'function') html = html(task);
-                action.innerHTML = html;
-                action.onclick = (e) => func(task, this.gantt, e);
+                const h =
+                    typeof htmlFrag === 'function' ? htmlFrag(task) : htmlFrag;
+                action.innerHTML = h;
+                action.onclick = (ev: MouseEvent) =>
+                    func(task, this.gantt, ev);
             },
         });
         if (html === false) return;
@@ -55,7 +79,7 @@ export default class Popup {
         this.parent.classList.remove('hide');
     }
 
-    hide() {
+    hide(): void {
         this.parent.classList.add('hide');
     }
 }

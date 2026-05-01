@@ -1,18 +1,27 @@
 import date_utils from './date_utils';
+import type {
+    GanttChartLike,
+    GanttOptions,
+    GanttTaskInternal,
+    PopupFactory,
+    ViewMode,
+} from './types';
 
-function getDecade(d) {
+function getDecade(d: Date): string {
     const year = d.getFullYear();
     return year - (year % 10) + '';
 }
 
-function formatWeek(d, ld, lang) {
-    let endOfWeek = date_utils.add(d, 6, 'day');
-    let endFormat = endOfWeek.getMonth() !== d.getMonth() ? 'D MMM' : 'D';
-    let beginFormat = !ld || d.getMonth() !== ld.getMonth() ? 'D MMM' : 'D';
+function formatWeek(d: Date, ld: Date | null, lang: string): string {
+    const endOfWeek = date_utils.add(d, 6, 'day');
+    const endFormat =
+        endOfWeek.getMonth() !== d.getMonth() ? 'D MMM' : 'D';
+    const beginFormat =
+        !ld || d.getMonth() !== ld.getMonth() ? 'D MMM' : 'D';
     return `${date_utils.format(d, beginFormat, lang)} - ${date_utils.format(endOfWeek, endFormat, lang)}`;
 }
 
-const DEFAULT_VIEW_MODES = [
+const DEFAULT_VIEW_MODES: ViewMode[] = [
     {
         name: 'Hour',
         padding: '7d',
@@ -45,7 +54,7 @@ const DEFAULT_VIEW_MODES = [
         lower_text: 'HH',
         upper_text: (d, ld, lang) =>
             !ld || d.getDate() !== ld.getDate()
-                ? d.getMonth() !== d.getMonth()
+                ? !ld || d.getMonth() !== ld.getMonth()
                     ? date_utils.format(d, 'D MMM', lang)
                     : date_utils.format(d, 'D', lang)
                 : '',
@@ -100,14 +109,45 @@ const DEFAULT_VIEW_MODES = [
         step: '1y',
         column_width: 120,
         date_format: 'YYYY',
-        upper_text: (d, ld, lang) =>
+        upper_text: (d, ld) =>
             !ld || getDecade(d) !== getDecade(ld) ? getDecade(d) : '',
         lower_text: 'YYYY',
         snap_at: '30d',
     },
 ];
 
-const DEFAULT_OPTIONS = {
+const defaultPopup: PopupFactory = (ctx) => {
+    const task = ctx.task as GanttTaskInternal & {
+        description?: string;
+        actual_duration?: number;
+        ignored_duration?: number;
+    };
+    const chart = ctx.chart as GanttChartLike;
+    ctx.set_title(task.name);
+    if (task.description) ctx.set_subtitle(task.description);
+    else ctx.set_subtitle('');
+
+    const start_date = date_utils.format(
+        task._start,
+        'MMM D',
+        chart.options.language as string,
+    );
+    const end_date = date_utils.format(
+        date_utils.add(task._end, -1, 'second'),
+        'MMM D',
+        chart.options.language as string,
+    );
+
+    const actual = task.actual_duration ?? 0;
+    const ignored = task.ignored_duration ?? 0;
+    ctx.set_details(
+        `${start_date} - ${end_date} (${actual} days${ignored ? ' + ' + ignored + ' excluded' : ''})<br/>Progress: ${Math.floor((task.progress ?? 0) * 100) / 100}%`,
+    );
+};
+
+const DEFAULT_OPTIONS: GanttOptions & {
+    view_modes: ViewMode[];
+} = {
     arrow_curve: 5,
     auto_move_label: false,
     bar_corner_radius: 3,
@@ -124,27 +164,9 @@ const DEFAULT_OPTIONS = {
     language: 'en',
     lines: 'both',
     move_dependencies: true,
+    restrict_drag_by_dependencies: true,
     padding: 18,
-    popup: (ctx) => {
-        ctx.set_title(ctx.task.name);
-        if (ctx.task.description) ctx.set_subtitle(ctx.task.description);
-        else ctx.set_subtitle('');
-
-        const start_date = date_utils.format(
-            ctx.task._start,
-            'MMM D',
-            ctx.chart.options.language,
-        );
-        const end_date = date_utils.format(
-            date_utils.add(ctx.task._end, -1, 'second'),
-            'MMM D',
-            ctx.chart.options.language,
-        );
-
-        ctx.set_details(
-            `${start_date} - ${end_date} (${ctx.task.actual_duration} days${ctx.task.ignored_duration ? ' + ' + ctx.task.ignored_duration + ' excluded' : ''})<br/>Progress: ${Math.floor(ctx.task.progress * 100) / 100}%`,
-        );
-    },
+    popup: defaultPopup,
     popup_on: 'click',
     readonly_progress: false,
     readonly_dates: false,

@@ -1,5 +1,6 @@
 import { WorkspaceLeaf } from 'obsidian';
-import Gantt from '../../lib/frappe-gantt/src/index'
+import Gantt from '../../lib/frappe-gantt/index';
+import type { GanttTaskInternal } from '../../lib/frappe-gantt/types';
 import { GANTT_VIEW_TYPE, GANTT_TAB_NAME, MillisecsInDay } from '../constants';
 import { GanttSettings, IPage, ISubscriber, Src } from '../types';
 import { getBlockers, getProgress } from '../util';
@@ -100,13 +101,14 @@ export class GanttView extends BaseSrcView implements ISubscriber {
       mapping.set(event.extra.path, event)
     }
 
-    const events = this.gantt.tasks as Array<IEvent>
-    for (let [i, event] of events.entries()) {
-      const newEvent = mapping.get(event.extra.path)
+    for (const task of this.gantt.tasks) {
+      const path = (task as unknown as IEvent).extra?.path
+      if (!path) continue
+      const newEvent = mapping.get(path)
       if (!newEvent)
         continue
 
-      this.gantt.update_task(event.id, newEvent)
+      this.gantt.update_task(task.id, newEvent as unknown as GanttTaskInternal)
       mapping.delete(newEvent.extra.path)
     }
     for (let [key, val] of mapping.entries()) {
@@ -177,11 +179,11 @@ export class GanttView extends BaseSrcView implements ISubscriber {
     return {
       infinite_padding: false,
       move_dependencies: false,
+      restrict_drag_by_dependencies: false,
       readonly_progress: true,
-      // readonly: true,
       scroll_to: date,
 
-      on_date_change: async (task: IEvent, start: Date, end: Date) => {
+      on_date_change: async (task: GanttTaskInternal, start: Date, end: Date) => {
         // ! для ISO (он переводит в гринвич мое время)
         // я тут говорю, что я в гринвиче
         start.setMinutes(
@@ -191,8 +193,10 @@ export class GanttView extends BaseSrcView implements ISubscriber {
           end.getMinutes() - end.getTimezoneOffset() + 1 // +1 for next day
         )
 
+        const path = (task as unknown as IEvent).extra.path
+
         await this.noteManager.changePropertyFile(
-          task.extra.path,
+          path,
           property => {
             property['ff_date'] = start.toISOString().slice(0, -14)
             property['ff_deadline'] = end.toISOString().slice(0, -14)
