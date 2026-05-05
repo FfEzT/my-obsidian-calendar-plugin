@@ -14641,7 +14641,7 @@ var import_obsidian2 = require("obsidian");
 // src/constants.ts
 var MSG_PLG_NAME = "MyCalendar";
 var EVENT_SRC = "/";
-var PLACE_FOR_CREATING_NOTE = "databases";
+var PLACE_FOR_CREATING_NOTE = "";
 var daysOfWeek = ["1", "2", "3", "4", "5", "6", "0"];
 var display = "background";
 var COLOUR_REST = "#305B60";

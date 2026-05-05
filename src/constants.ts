@@ -3,7 +3,7 @@ import { PluginSettings, Src } from "./types"
 export const MSG_PLG_NAME = "MyCalendar"
 
 const EVENT_SRC = "/"
-const PLACE_FOR_CREATING_NOTE = "databases"
+const PLACE_FOR_CREATING_NOTE = ""
 
 const daysOfWeek = [ '1','2','3','4','5','6','0' ] // these recurrent events move separately
 const display = 'background'
@@ -74,7 +74,7 @@ export const CALENDAR_TAB_NAME = 'Calendar'
 export const GANTT_TAB_NAME = 'Gantt'
 
 
-// TODO переделать в TEXT = {DONE...BLOCKED}
+// TODO переделать в TEXT = {DONE...BLOCKED} enum
 export const TEXT_DONE = "🟢done"
 export const TEXT_IN_PROGRESS = "🔵in progress"
 export const TEXT_SOON = "🟣soon"
