@@ -202,12 +202,26 @@ export class GanttView extends BaseSrcView implements ISubscriber {
         )
 
         const path = (task as unknown as IEvent).extra.path
+        const page = this.cache.getPage(path)
+        const hadStart = !!page?.ff_date
+        const hadDeadline = !!page?.ff_deadline
+        const durationDays = Math.round(
+          (end.getTime() - start.getTime()) / MillisecsInDay
+        )
+        const isDefaultSpan = durationDays === DEFAULT_OFFSET_DAY
 
         await this.noteManager.changePropertyFile(
           path,
           property => {
-            property['ff_date'] = start.toISOString().slice(0, -14)
-            property['ff_deadline'] = end.toISOString().slice(0, -14)
+            const persistStart = hadStart || !isDefaultSpan
+            const persistDeadline = hadDeadline || !isDefaultSpan
+              || (!hadStart && !hadDeadline)
+
+            if (persistStart)
+              property['ff_date'] = start.toISOString().slice(0, -14)
+
+            if (persistDeadline)
+              property['ff_deadline'] = end.toISOString().slice(0, -14)
           }
         )
       },
