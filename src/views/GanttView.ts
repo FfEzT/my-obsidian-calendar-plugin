@@ -78,7 +78,7 @@ export class GanttView extends BaseSrcView implements ISubscriber {
 
     this.render(htmlContainer)
     this.renderLegend(legendContainter)
-    this.renderSrcCheckboxes(checkBoxContainer)
+    this.renderSrcCheckboxesWithDataviewFilter(checkBoxContainer)
   }
 
   public addFile(page: IPage): void {

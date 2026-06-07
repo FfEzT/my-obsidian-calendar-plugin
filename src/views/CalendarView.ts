@@ -72,7 +72,7 @@ export class CalendarView extends BaseSrcView implements ISubscriber {
     const calendarContainer = container.createDiv()
 
     this.render(calendarContainer)
-    this.renderSrcCheckboxes(checkBoxContainer)
+    this.renderSrcCheckboxesWithDataviewFilter(checkBoxContainer)
   }
 
   public onResize() {
