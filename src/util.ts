@@ -212,7 +212,7 @@ export function templateIDTick(path: string, tickName:string) {
 
 // как будет отображаться в календаре тик
 export function templateNameTick(fileName: string, tickName:string) {
-  return "("+fileName+")" + tickName
+  return "["+fileName+"] " + tickName
 }
 
 function hashString(str: string) {

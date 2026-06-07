@@ -7634,7 +7634,7 @@ var require_lib = __commonJS({
       })
     });
     var optionalWhitespaceOrComment = parsimmon_umd_minExports.alt(parsimmon_umd_minExports.whitespace, QUERY_LANGUAGE.comment).many().map((arr) => arr.join(""));
-    var getAPI2 = (app) => {
+    var getAPI3 = (app) => {
       var _a;
       if (app)
         return (_a = app.plugins.plugins.dataview) == null ? void 0 : _a.api;
@@ -7647,7 +7647,7 @@ var require_lib = __commonJS({
     exports.EXPRESSION = EXPRESSION;
     exports.KEYWORDS = KEYWORDS;
     exports.QUERY_LANGUAGE = QUERY_LANGUAGE;
-    exports.getAPI = getAPI2;
+    exports.getAPI = getAPI3;
     exports.isPluginEnabled = isPluginEnabled;
     exports.parseField = parseField;
   }
@@ -14885,7 +14885,7 @@ function templateIDTick(path, tickName) {
   return path + tickName;
 }
 function templateNameTick(fileName, tickName) {
-  return "(" + fileName + ")" + tickName;
+  return "[" + fileName + "] " + tickName;
 }
 function hashString(str) {
   let hash = 0;
@@ -31906,26 +31906,344 @@ function renderCalendar(containerEl, eventSources, settings) {
 
 // src/views/BaseSrcView.ts
 var import_obsidian = require("obsidian");
+var import_obsidian_dataview2 = __toESM(require_lib());
+function stripCodeFence(text) {
+  let t3 = text.trim();
+  if (t3.startsWith("```")) {
+    t3 = t3.replace(/^```(?:dataview)?\s*/i, "");
+    t3 = t3.replace(/\s*```\s*$/i, "");
+  }
+  return t3.trim();
+}
+function sleep2(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+async function waitDvReady(app) {
+  const api = (0, import_obsidian_dataview2.getAPI)(app);
+  if (!api)
+    return void 0;
+  for (let i3 = 0; i3 < 200; i3++) {
+    if (api.index.initialized)
+      return api;
+    await sleep2(50);
+  }
+  return api;
+}
+function isLuxonDateTime(val) {
+  return typeof val === "object" && val !== null && typeof val.isValid === "boolean";
+}
+function isDataviewLink(val) {
+  if (typeof val !== "object" || val === null)
+    return false;
+  const o2 = val;
+  return typeof o2.path === "string" && o2.path.endsWith(".md") && typeof o2.embed === "boolean";
+}
+function collectPathsFromLiteral(val) {
+  if (val == null)
+    return [];
+  if (typeof val === "string") {
+    if (val.endsWith(".md") && !val.includes("\n"))
+      return [val];
+    return [];
+  }
+  if (typeof val === "number" || typeof val === "boolean")
+    return [];
+  if (isLuxonDateTime(val))
+    return [];
+  if (isDataviewLink(val))
+    return [val.path];
+  if (Array.isArray(val))
+    return val.flatMap(collectPathsFromLiteral);
+  if (typeof val === "object" && val !== null) {
+    const o2 = val;
+    if (typeof o2.path === "string" && o2.path.endsWith(".md"))
+      return [o2.path];
+    const file = o2.file;
+    if (file && typeof file === "object") {
+      const fp = file.path;
+      if (typeof fp === "string" && fp.endsWith(".md"))
+        return [fp];
+    }
+  }
+  return [];
+}
+function collectPathsFromTaskGrouping(group) {
+  const out = [];
+  if (!group)
+    return out;
+  if (!Array.isArray(group))
+    return out;
+  for (const el of group) {
+    if (el && typeof el === "object" && "rows" in el) {
+      const rows = el.rows;
+      out.push(...collectPathsFromTaskGrouping(rows));
+    } else if (el && typeof el === "object") {
+      const item = el;
+      if (typeof item.path === "string" && item.path.endsWith(".md"))
+        out.push(item.path);
+      if (Array.isArray(item.children))
+        out.push(...collectPathsFromTaskGrouping(item.children));
+    }
+  }
+  return out;
+}
+async function runDataviewToPaths(app, rawSource) {
+  const text = stripCodeFence(rawSource);
+  if (!text)
+    return { paths: /* @__PURE__ */ new Set() };
+  const api = await waitDvReady(app);
+  if (!api)
+    return { paths: /* @__PURE__ */ new Set(), error: "Dataview is not installed or not ready" };
+  const fullQuery = /^\s*(LIST|TABLE|TASK|CALENDAR)\b/im.test(text);
+  if (!fullQuery) {
+    try {
+      const arr = api.pagePaths(text).array();
+      return { paths: new Set(arr) };
+    } catch (e3) {
+      return {
+        paths: /* @__PURE__ */ new Set(),
+        error: e3 instanceof Error ? e3.message : String(e3)
+      };
+    }
+  }
+  const result = await api.query(text, "");
+  if (!result.successful)
+    return { paths: /* @__PURE__ */ new Set(), error: result.error };
+  const v3 = result.value;
+  if (v3.type === "list") {
+    const all = [];
+    for (const lit of v3.values)
+      all.push(...collectPathsFromLiteral(lit));
+    return { paths: new Set(all) };
+  }
+  if (v3.type === "table") {
+    const all = [];
+    for (const row of v3.values) {
+      for (const cell of row)
+        all.push(...collectPathsFromLiteral(cell));
+    }
+    return { paths: new Set(all) };
+  }
+  if (v3.type === "task")
+    return { paths: new Set(collectPathsFromTaskGrouping(v3.values)) };
+  if (v3.type === "calendar") {
+    const all = [];
+    for (const row of v3.values)
+      all.push(...collectPathsFromLiteral(row.link));
+    return { paths: new Set(all) };
+  }
+  return { paths: /* @__PURE__ */ new Set(), error: "Unsupported query result type" };
+}
 var BaseSrcView = class extends import_obsidian.ItemView {
   constructor(leaf, eventSrc, noteSourcesActions) {
     super(leaf);
     this.noteSourcesActions = noteSourcesActions;
     this.selectedSrcPaths = /* @__PURE__ */ new Set();
+    /** null = no Dataview filter; otherwise note path must be in this set */
+    this.dataviewAllowedPaths = null;
+    this.dataviewQueryDraft = "";
     this._eventSrc = eventSrc;
-    for (let src of eventSrc) {
+    for (const src of eventSrc)
       this.selectedSrcPaths.add(src.path);
+    this.dataviewQueryDraft = this.readStoredQueryText();
+  }
+  storageKeyQuery() {
+    return `${MSG_PLG_NAME}:dv-query:${this.app.vault.getName()}:${this.getViewType()}`;
+  }
+  storageKeyPresets() {
+    return `${MSG_PLG_NAME}:dv-presets:${this.app.vault.getName()}:${this.getViewType()}`;
+  }
+  readStoredQueryText() {
+    var _a;
+    try {
+      return (_a = localStorage.getItem(this.storageKeyQuery())) != null ? _a : "";
+    } catch (e3) {
+      return "";
+    }
+  }
+  writeStoredQueryText(q3) {
+    try {
+      localStorage.setItem(this.storageKeyQuery(), q3);
+    } catch (e3) {
+    }
+  }
+  readPresets() {
+    try {
+      const raw = localStorage.getItem(this.storageKeyPresets());
+      if (!raw)
+        return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed))
+        return [];
+      return parsed.filter(
+        (p3) => !!p3 && typeof p3 === "object" && typeof p3.name === "string" && typeof p3.query === "string"
+      );
+    } catch (e3) {
+      return [];
+    }
+  }
+  writePresets(presets) {
+    try {
+      localStorage.setItem(this.storageKeyPresets(), JSON.stringify(presets));
+    } catch (e3) {
     }
   }
   selectAllSrcPaths() {
     this.selectedSrcPaths.clear();
-    for (const src of this._eventSrc) {
+    for (const src of this._eventSrc)
       this.selectedSrcPaths.add(src.path);
-    }
   }
   reloadAfterSourceFoldersChange(src) {
     this._eventSrc = src;
     this.selectAllSrcPaths();
     this.resetViewForSourceChange();
+  }
+  /**
+   * Renders folder checkboxes plus a Dataview query panel (filter + saved presets).
+   * Prefer this over {@link renderSrcCheckboxes} so the Dataview UI is not cleared when folders re-render.
+   */
+  renderSrcCheckboxesWithDataviewFilter(container) {
+    container.empty();
+    const dvHost = container.createDiv({ cls: "mcal-dv-filter" });
+    this.renderDataviewQueryBlock(dvHost);
+    const folderHost = container.createDiv({ cls: "mcal-folder-src" });
+    this.renderSrcCheckboxes(folderHost);
+  }
+  renderDataviewQueryBlock(host) {
+    host.createEl("div", { cls: "setting-item-name", text: "Dataview: notes to show" });
+    host.createEl("div", {
+      cls: "setting-item-description",
+      text: 'Leave empty to use only the folders below. Otherwise enter a Dataview source (same as after FROM: #tag, "Folder", etc.) or a full LIST / TABLE / TASK / CALENDAR query. Only paths that appear in the result are shown, in addition to folder selection.'
+    });
+    const ta = host.createEl("textarea", {
+      cls: "mcal-dv-textarea",
+      attr: { rows: 5, placeholder: "#status/active\n\nLIST FROM #status/active" }
+    });
+    ta.style.width = "100%";
+    this.dataviewQueryDraft = this.readStoredQueryText();
+    ta.value = this.dataviewQueryDraft;
+    ta.addEventListener("input", () => {
+      this.dataviewQueryDraft = ta.value;
+    });
+    const statusEl = host.createEl("div", { cls: "setting-item-description mcal-dv-status" });
+    const btnRow = host.createDiv({ cls: "mcal-dv-btn-row" });
+    btnRow.style.display = "flex";
+    btnRow.style.flexWrap = "wrap";
+    btnRow.style.gap = "8px";
+    btnRow.style.marginTop = "6px";
+    btnRow.style.marginBottom = "8px";
+    const applyBtn = btnRow.createEl("button", { text: "Apply filter", cls: "mod-cta" });
+    applyBtn.addEventListener("click", () => {
+      void this.applyDataviewFilter(ta.value, statusEl);
+    });
+    const clearBtn = btnRow.createEl("button", { text: "Clear filter" });
+    clearBtn.addEventListener("click", () => {
+      ta.value = "";
+      this.dataviewQueryDraft = "";
+      void this.applyDataviewFilter("", statusEl);
+    });
+    const presetWrap = host.createDiv({ cls: "mcal-dv-preset-wrap" });
+    presetWrap.style.marginTop = "4px";
+    presetWrap.createEl("div", { cls: "setting-item-name", text: "Saved queries" });
+    const presetRow = presetWrap.createDiv();
+    presetRow.style.display = "flex";
+    presetRow.style.flexWrap = "wrap";
+    presetRow.style.gap = "8px";
+    presetRow.style.alignItems = "center";
+    presetRow.style.marginBottom = "6px";
+    const select = presetRow.createEl("select");
+    select.style.minWidth = "140px";
+    const nameInput = presetRow.createEl("input", {
+      type: "text",
+      attr: { placeholder: "Preset name" }
+    });
+    nameInput.style.minWidth = "120px";
+    const repopulateSelect = (selectedName) => {
+      select.empty();
+      const blank = select.createEl("option", { text: "\u2014 choose \u2014", value: "" });
+      blank.value = "";
+      for (const p3 of this.readPresets()) {
+        const opt = select.createEl("option", { text: p3.name, value: p3.name });
+        opt.value = p3.name;
+      }
+      if (selectedName)
+        select.value = selectedName;
+    };
+    repopulateSelect();
+    const savePresetBtn = presetRow.createEl("button", { text: "Save preset" });
+    savePresetBtn.addEventListener("click", () => {
+      const name = nameInput.value.trim();
+      if (!name) {
+        new import_obsidian.Notice(`${MSG_PLG_NAME}: enter a preset name`);
+        return;
+      }
+      const query2 = ta.value;
+      const list = this.readPresets().filter((p3) => p3.name !== name);
+      list.push({ name, query: query2 });
+      list.sort((a3, b3) => a3.name.localeCompare(b3.name));
+      this.writePresets(list);
+      repopulateSelect(name);
+      new import_obsidian.Notice(`${MSG_PLG_NAME}: preset \u201C${name}\u201D saved`);
+    });
+    const loadBtn = presetRow.createEl("button", { text: "Load" });
+    loadBtn.addEventListener("click", () => {
+      const name = select.value;
+      if (!name) {
+        new import_obsidian.Notice(`${MSG_PLG_NAME}: choose a preset`);
+        return;
+      }
+      const found = this.readPresets().find((p3) => p3.name === name);
+      if (!found) {
+        new import_obsidian.Notice(`${MSG_PLG_NAME}: preset not found`);
+        return;
+      }
+      ta.value = found.query;
+      this.dataviewQueryDraft = found.query;
+      void this.applyDataviewFilter(found.query, statusEl);
+    });
+    const delBtn = presetRow.createEl("button", { text: "Delete preset" });
+    delBtn.addEventListener("click", () => {
+      const name = select.value;
+      if (!name) {
+        new import_obsidian.Notice(`${MSG_PLG_NAME}: choose a preset to delete`);
+        return;
+      }
+      const list = this.readPresets().filter((p3) => p3.name !== name);
+      this.writePresets(list);
+      repopulateSelect();
+      new import_obsidian.Notice(`${MSG_PLG_NAME}: preset \u201C${name}\u201D removed`);
+    });
+    void this.applyDataviewFilter(this.dataviewQueryDraft, statusEl, true);
+  }
+  /**
+   * @param silent if true, do not show error Notice (used when re-applying stored text on open)
+   */
+  async applyDataviewFilter(raw, statusEl, silent = false) {
+    const trimmed = stripCodeFence(raw).trim();
+    this.writeStoredQueryText(raw);
+    this.dataviewQueryDraft = raw;
+    const setStatus = (msg, isErr = false) => {
+      statusEl.setText(msg);
+      statusEl.toggleClass("mod-warning", isErr);
+    };
+    if (!trimmed) {
+      this.dataviewAllowedPaths = null;
+      setStatus("Filter off: all notes in selected folders (subject to cache).");
+      await this.refreshView();
+      return;
+    }
+    const { paths, error } = await runDataviewToPaths(this.app, raw);
+    if (error) {
+      if (!silent)
+        new import_obsidian.Notice(`${MSG_PLG_NAME}: Dataview \u2014 ${error}`);
+      setStatus(error, true);
+      return;
+    }
+    this.dataviewAllowedPaths = paths;
+    setStatus(`Filter on: ${paths.size} note path(s) matched.`);
+    await this.refreshView();
   }
   renderSrcCheckboxes(srcCheckboxContainer) {
     srcCheckboxContainer.empty();
@@ -31937,9 +32255,8 @@ var BaseSrcView = class extends import_obsidian.ItemView {
     });
     const selectAllButton = srcCheckboxContainer.createEl("button", { text: "Select All" });
     selectAllButton.addEventListener("click", async () => {
-      for (let src of this._eventSrc) {
+      for (const src of this._eventSrc)
         this.selectedSrcPaths.add(src.path);
-      }
       this.renderSrcCheckboxes(srcCheckboxContainer);
       await this.refreshView();
     });
@@ -31949,7 +32266,7 @@ var BaseSrcView = class extends import_obsidian.ItemView {
       this.renderSrcCheckboxes(srcCheckboxContainer);
       await this.refreshView();
     });
-    for (let src of this._eventSrc) {
+    for (const src of this._eventSrc) {
       const id = `src-checkbox-${this.getViewType()}-${src.path}`;
       const checkboxContainer = srcCheckboxContainer.createDiv({ cls: "src-checkbox-item" });
       const checkbox = checkboxContainer.createEl("input", {
@@ -31960,15 +32277,14 @@ var BaseSrcView = class extends import_obsidian.ItemView {
         }
       });
       checkbox.addEventListener("change", async () => {
-        if (checkbox.checked) {
+        if (checkbox.checked)
           this.selectedSrcPaths.add(src.path);
-        } else {
+        else
           this.selectedSrcPaths.delete(src.path);
-        }
         await this.refreshView();
       });
       checkboxContainer.createEl("label", {
-        text: src.path,
+        text: src.path || "/",
         attr: { for: id }
       });
     }
@@ -31987,7 +32303,11 @@ var BaseSrcView = class extends import_obsidian.ItemView {
       },
       eventSrc[0]
     );
-    return this.selectedSrcPaths.has(src.path);
+    if (!this.selectedSrcPaths.has(src.path))
+      return false;
+    if (this.dataviewAllowedPaths !== null && !this.dataviewAllowedPaths.has(pagePath))
+      return false;
+    return true;
   }
   get eventSrc() {
     return this._eventSrc;
@@ -32020,7 +32340,7 @@ var CalendarView = class extends BaseSrcView {
     const checkBoxContainer = container.createDiv();
     const calendarContainer = container.createDiv();
     this.render(calendarContainer);
-    this.renderSrcCheckboxes(checkBoxContainer);
+    this.renderSrcCheckboxesWithDataviewFilter(checkBoxContainer);
   }
   onResize() {
     var _a;
@@ -35953,7 +36273,7 @@ var _GanttView = class extends BaseSrcView {
     );
     this.render(htmlContainer);
     this.renderLegend(legendContainter);
-    this.renderSrcCheckboxes(checkBoxContainer);
+    this.renderSrcCheckboxesWithDataviewFilter(checkBoxContainer);
   }
   addFile(page) {
     this.localStorage.addPage(page);
